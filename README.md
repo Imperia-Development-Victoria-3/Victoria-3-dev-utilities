@@ -4,10 +4,10 @@ To launch the software you require a:
 	* python>=3.7
 
 command to install the requirements
-	python -m pip install -r requirements.txt
+	`python -m pip install -r requirements.txt`
 
 
 simply run:
-	python main.py
+	`python main.py`
 
 and go to the specified website in your favorite browser (usually http://127.0.0.1:8050/)
