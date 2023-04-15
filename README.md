@@ -1,4 +1,4 @@
-This is the public repository of Babylon Development focused on providing developers with tools to better mot Victoria games
+This is the public repository of Babylon Development focused on providing developers with tools to better mod Victoria games
 
 To launch the software you require a:
 	* python>=3.7
