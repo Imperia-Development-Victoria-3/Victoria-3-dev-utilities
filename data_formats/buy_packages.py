@@ -3,6 +3,7 @@ import plotly.graph_objs as go
 from parse_decoder import decode_dictionary
 import copy
 
+
 class BuyPackages:
 
     def __init__(self, dictionary):
@@ -27,7 +28,7 @@ class BuyPackages:
             if type(key) == str:
                 self.keys |= set(value.keys())
                 self.keys |= set(value["goods"].keys())
-    
+
     def _construct_arrays(self):
         self.arrays = {}
         for key in self.keys:
@@ -48,8 +49,9 @@ class BuyPackages:
 
     def get_iterable(self, key):
         if key not in self.keys:
-            error_message = "Invalid key for buy packages. You tried: \"" + key + "\" but the options are: " + str(self.keys)
-            raise ValueError(error_message) 
+            error_message = "Invalid key for buy packages. You tried: \"" + key + "\" but the options are: " + str(
+                self.keys)
+            raise ValueError(error_message)
 
         if key == "political_strength" or key == "goods":
             for item in self.packages:
@@ -89,12 +91,12 @@ class BuyPackages:
                 del value["goods"][key_2]
                 value["goods"]["popneed_" + key_2] = value_2
             dictionary["wealth_" + str(index)] = value
-         
+
         string = decode_dictionary(dictionary)
         with open(path, "w") as file:
             file.write(string)
 
-       
+
 class DashBuyPackages(BuyPackages):
 
     def __init__(self, dictionary):
@@ -136,7 +138,8 @@ class DashBuyPackages(BuyPackages):
             index = 0
             for key in self.keys:
                 if key != "goods" and key != "political_strength":
-                    trace = go.Scatter(x=x, y=self.get_array(key), name=key, stackgroup='one', groupnorm='percent',  hoveron='points+fills', hoverinfo = 'text+x+y')
+                    trace = go.Scatter(x=x, y=self.get_array(key), name=key, stackgroup='one', groupnorm='percent',
+                                       hoveron='points+fills', hoverinfo='text+x+y')
                     traces.append(trace)
                     index += 1
             layout = go.Layout(title='Buy Packages', legend=dict(x=0, y=1), dragmode='lasso')
@@ -145,7 +148,8 @@ class DashBuyPackages(BuyPackages):
 
     def patch_ploty_plot(self, cell, patched_figure, percentages=False):
         # if not percentages:
-        patched_figure["data"][cell["column"]]["y"][cell["row"]] = self.packages[cell["row"]]["goods"].get(cell["column_id"])
+        patched_figure["data"][cell["column"]]["y"][cell["row"]] = self.packages[cell["row"]]["goods"].get(
+            cell["column_id"])
         # else:
         #     percentage_matrix = self.get_percentages()
         #     print(percentage_matrix.shape)

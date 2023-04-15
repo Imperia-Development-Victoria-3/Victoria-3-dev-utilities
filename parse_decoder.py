@@ -1,4 +1,7 @@
-def decode_dictionary(dictionary, depth = 0):
+from constants import *
+
+
+def decode_dictionary(dictionary, depth=0):
     result = ""
     for key, value in dictionary.items():
         if type(value) == dict:
@@ -16,5 +19,5 @@ def decode_dictionary(dictionary, depth = 0):
                 # print("full: ", value[2])
                 result += value[2] + "\n"
     if depth > 0:
-        result +=  "\t" * (depth - 1) + "}" + "\n"
+        result += "\t" * (depth - 1) + "}" + "\n"
     return result
