@@ -1,17 +1,15 @@
-import numpy as np
-import plotly.graph_objs as go
 from parse_decoder import decode_dictionary
-import copy
+import pandas as pd
+import plotly.express as px
 
 
 class BuyPackages:
 
     def __init__(self, dictionary):
         self._dictionary = dictionary
-        self._intepret_buy_packages(dictionary)
-        self._construct_arrays()
+        self._interpret_buy_packages(dictionary)
 
-    def _intepret_buy_packages(self, dictionary):
+    def _interpret_buy_packages(self, dictionary):
         self.packages = [0] * len(dictionary)
         for key, value in dictionary.items():
             if type(key) == str:
@@ -24,28 +22,12 @@ class BuyPackages:
                 self.packages[int(index) - 1] = value
 
         self.keys = set()
-        for key, value in dictionary.items():
-            if type(key) == str:
-                self.keys |= set(value.keys())
-                self.keys |= set(value["goods"].keys())
+        for item in self.packages:
+            self.keys |= set(item.keys())
+            self.keys |= set(item["goods"].keys())
 
-    def _construct_arrays(self):
-        self.arrays = {}
-        for key in self.keys:
-            if key != "goods":
-                self.arrays[key] = np.array(list(self.get_iterable(key)))
-
-        goods_matrix = np.zeros([len(self.keys) - 2, len(self.packages)])
-        index = 0
-        for key in self.keys:
-            if key != "goods" and key != "political_strength":
-                goods_matrix[index] = np.array(list(self.get_iterable(key)))
-                index += 1
-        self.arrays["goods"] = goods_matrix
-
-    def get_percentages(self):
-        goods_matrix = self.arrays["goods"]
-        return goods_matrix / np.sum(goods_matrix, axis=0)
+        self.df = pd.json_normalize(self.packages, sep='.')
+        self.df = self.df.applymap(float)
 
     def get_iterable(self, key):
         if key not in self.keys:
@@ -53,46 +35,32 @@ class BuyPackages:
                 self.keys)
             raise ValueError(error_message)
 
-        if key == "political_strength" or key == "goods":
-            for item in self.packages:
-                if key == "political_strength":
-                    yield float(item[key])
-                else:
-                    yield item[key]
-        else:
-            for item in self.packages:
-                yield float(item["goods"].get(key, 0))
-
-    def get_array(self, key):
-        return self.arrays[key]
+        filtered = self.df.filter(like=key, axis=1)
+        for row in filtered.itertuples(index=False):
+            yield row
 
     def update_value(self, key, index, value):
-        if key == "political_strength" or key == "goods":
-            if value:
-                self.packages[index][key] = value
-            else:
-                if self.packages[index].get(key):
-                    del self.packages[index][key]
-        else:
-            if value:
-                self.packages[index]["goods"][key] = value
-            else:
-                if self.packages[index].get(key):
-                    del self.packages[index][key]
-
-        self._construct_arrays()
+        self.df.at[index, key] = value
 
     def export_paradox(self, path):
-        print(self._dictionary["wealth_1"])
-        dictionary = copy.deepcopy(self._dictionary)
-        packages = copy.deepcopy(self.packages)
-        for index, value in enumerate(packages, 1):
-            for key_2, value_2 in list(value["goods"].items()):
-                del value["goods"][key_2]
-                value["goods"]["popneed_" + key_2] = value_2
-            dictionary["wealth_" + str(index)] = value
-
-        string = decode_dictionary(dictionary)
+        info_list = self.df.to_dict("records")
+        for index, item in enumerate(info_list, 1):
+            for key, value in item.items():
+                if value == value:
+                    print(type(value), value)
+                    if "goods" in key:
+                        self._dictionary["wealth_" + str(index)]["goods"][key.split(".")[-1]] = str(round(value))
+                    else:
+                        self._dictionary["wealth_" + str(index)][key] = str(round(value))
+                else:
+                    try:
+                        if "goods" in key:
+                            del self._dictionary["wealth_" + str(index)]["goods"][key.split(".")[-1]]
+                        else:
+                            del self._dictionary["wealth_" + str(index)][key]
+                    except:
+                        ""
+        string = decode_dictionary(self._dictionary)
         with open(path, "w") as file:
             file.write(string)
 
@@ -101,61 +69,30 @@ class DashBuyPackages(BuyPackages):
 
     def __init__(self, dictionary):
         super().__init__(dictionary)
+        self.figure_traces = dict()
 
-    def get_formatted_keys(self):
-        columns = []
-        for key in self.keys:
-            if key != "goods" and key != "political_strength":
-                columns.append({"name": key, "id": key})
-        return columns
-
-    def get_formatted_goods_data(self):
-        return list(self.get_iterable("goods"))
-
-    # def get_formmatted_goods_percentage_data(self):
-    #     data = []
-    #     percentage_matrix = self.get_percentages()
-    #     index = 0
-    #     for key in self.keys:
-    #         if key != "goods" and key != "political_strength":
-    #             data.append({key : percentage_matrix[index]})
-    #             index += 1
-    #     return data
-
-    def get_ploty_plot(self, percentages=False):
-        x = np.linspace(1, 99, 99)
-        if not percentages:
-            traces = []
-            for key in self.keys:
-                if key != "goods" and key != "political_strength":
-                    trace = go.Scatter(x=x, y=self.get_array(key), mode='markers+lines', name=key)
-                    traces.append(trace)
-            layout = go.Layout(title='Buy Packages', yaxis_type='log', legend=dict(x=0, y=1), dragmode='lasso')
-            fig = go.Figure(data=traces, layout=layout)
+    def get_ploty_plot(self, query, plot_type):
+        filtered = self.df.filter(like=query, axis=1)
+        if "goods" in query:
+            renamed = filtered.rename(columns=lambda x: x.replace('goods.', ''))
         else:
-            traces = []
-            percentage_matrix = self.get_percentages()
-            index = 0
-            for key in self.keys:
-                if key != "goods" and key != "political_strength":
-                    trace = go.Scatter(x=x, y=self.get_array(key), name=key, stackgroup='one', groupnorm='percent',
-                                       hoveron='points+fills', hoverinfo='text+x+y')
-                    traces.append(trace)
-                    index += 1
-            layout = go.Layout(title='Buy Packages', legend=dict(x=0, y=1), dragmode='lasso')
-            fig = go.Figure(data=traces, layout=layout)
+            renamed = filtered
+        if plot_type == "lines":
+            fig = px.line(renamed)
+            fig.update_traces(mode="markers+lines", hovertemplate=None)
+            fig.update_layout(hovermode="x unified", yaxis_type='log')
+        elif plot_type == "area":
+            fig = px.area(renamed, groupnorm='percent')
+            fig.update_traces(mode="markers+lines", hovertemplate=None)
+            fig.update_layout(hovermode="x unified")
+        else:
+            raise ValueError("invalid ")
+        self.figure_traces = {trace.name: i for i, trace in enumerate(fig["data"])}
         return fig
 
     def patch_ploty_plot(self, cell, patched_figure, percentages=False):
         # if not percentages:
-        patched_figure["data"][cell["column"]]["y"][cell["row"]] = self.packages[cell["row"]]["goods"].get(
-            cell["column_id"])
-        # else:
-        #     percentage_matrix = self.get_percentages()
-        #     print(percentage_matrix.shape)
-        #     print(percentage_matrix[:, :3])
-        #     index = 0
-        #     for key in self.keys:
-        #         if key != "goods" and key != "political_strength":
-        #             patched_figure["data"][index]["y"][cell["row"]] = percentage_matrix[index, cell["row"]]
-        #             index += 1
+        data = self.df.filter(like=cell["column_id"], axis=1)
+        for key, index in self.figure_traces.items():
+            if key in cell["column_id"]:
+                patched_figure["data"][index]["y"][cell["row"]] = data.iat[cell["row"], 0]

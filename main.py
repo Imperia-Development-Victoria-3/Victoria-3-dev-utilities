@@ -18,14 +18,14 @@ app.layout = html.Div([
     html.Br(),
     dash_table.DataTable(
         id='editable-table',
-        columns=buy_packages.get_formatted_keys(),
-        data=buy_packages.get_formatted_goods_data(),
+        columns=[{"name": i, "id": i} for i in buy_packages.df.filter(like="goods", axis=1).columns],
+        data=buy_packages.df.filter(like="goods", axis=1).to_dict("records"),
         editable=True,
         style_table={'height': '200px', 'overflowY': 'auto'}
     ),
     html.Br(),
     dcc.Graph(
-        figure=buy_packages.get_ploty_plot(True),
+        figure=buy_packages.get_ploty_plot("goods", "area"),
         id='buy-packages-plot',
         style={'height': '700px'})
 ])
@@ -58,9 +58,9 @@ def update_buy_packages_plot(data, active_cell, prev_active_cell):
     patched_figure = Patch()
     for cell in cells:
         if cell:
-            value = data[cell["row"]].get(cell["column_id"], 0)
+            value = data[cell["row"]].get(cell["column_id"], None)
             buy_packages.update_value(cell["column_id"], cell["row"], value)
-            buy_packages.patch_ploty_plot(cell, patched_figure, True)
+            buy_packages.patch_ploty_plot(cell, patched_figure, False)
     return patched_figure
 
 
