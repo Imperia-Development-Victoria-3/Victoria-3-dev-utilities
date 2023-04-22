@@ -1,6 +1,7 @@
 from parse_decoder import decode_dictionary
 import pandas as pd
 import plotly.express as px
+import copy
 
 
 class BuyPackages:
@@ -10,11 +11,12 @@ class BuyPackages:
         self._interpret_buy_packages(dictionary)
 
     def _interpret_buy_packages(self, dictionary):
+        self._dictionary = dictionary
+        dictionary = copy.deepcopy(dictionary)
         self.packages = [0] * len(dictionary)
         for key, value in dictionary.items():
             if type(key) == str:
                 name, index = key.split("_")
-
                 # just getting rid of the popneed qualifier as it is uninformative
                 for key_2, value_2 in list(value["goods"].items()):
                     del value["goods"][key_2]
@@ -40,6 +42,8 @@ class BuyPackages:
             yield row
 
     def update_value(self, key, index, value):
+        if value:
+            value = float(value)
         self.df.at[index, key] = value
 
     def export_paradox(self, path):
@@ -47,18 +51,17 @@ class BuyPackages:
         for index, item in enumerate(info_list, 1):
             for key, value in item.items():
                 if value == value:
-                    print(type(value), value)
                     if "goods" in key:
-                        self._dictionary["wealth_" + str(index)]["goods"][key.split(".")[-1]] = str(round(value))
+                        self._dictionary["wealth_" + str(index)]["goods"]["popneed_" + key.split(".")[-1]] = str(round(value))
                     else:
-                        self._dictionary["wealth_" + str(index)][key] = str(round(value))
+                        self._dictionary["wealth_" + str(index)][key] = str(value)
                 else:
                     try:
                         if "goods" in key:
-                            del self._dictionary["wealth_" + str(index)]["goods"][key.split(".")[-1]]
+                            del self._dictionary["wealth_" + str(index)]["goods"]["popneed_" + key.split(".")[-1]]
                         else:
                             del self._dictionary["wealth_" + str(index)][key]
-                    except:
+                    except KeyError:
                         ""
         string = decode_dictionary(self._dictionary)
         with open(path, "w") as file:
