@@ -2,6 +2,7 @@ from parse_decoder import decode_dictionary
 import pandas as pd
 import plotly.express as px
 import copy
+from data_utils.transformation import Transform
 
 
 class BuyPackages:
@@ -10,10 +11,12 @@ class BuyPackages:
         self._dictionary = dictionary
         self._interpret_buy_packages(dictionary)
 
+        self._transforms = {}
+
     def _interpret_buy_packages(self, dictionary):
         self._dictionary = dictionary
         dictionary = copy.deepcopy(dictionary)
-        self.packages = [0] * len(dictionary)
+        packages = [0] * len(dictionary)
         for key, value in dictionary.items():
             if type(key) == str:
                 name, index = key.split("_")
@@ -21,14 +24,14 @@ class BuyPackages:
                 for key_2, value_2 in list(value["goods"].items()):
                     del value["goods"][key_2]
                     value["goods"]["_".join(key_2.split("_")[1:])] = value_2
-                self.packages[int(index) - 1] = value
+                packages[int(index) - 1] = value
 
         self.keys = set()
-        for item in self.packages:
+        for item in packages:
             self.keys |= set(item.keys())
             self.keys |= set(item["goods"].keys())
 
-        self.df = pd.json_normalize(self.packages, sep='.')
+        self.df = pd.json_normalize(packages, sep='.')
         self.df = self.df.applymap(float)
 
     def get_iterable(self, key):
@@ -47,12 +50,18 @@ class BuyPackages:
         self.df.at[index, key] = value
 
     def export_paradox(self, path):
+        tmp_transforms = self._transforms
+        self._transforms = {}
+        for function, query in tmp_transforms.values():
+            self.apply_transformation(function, query)
+
         info_list = self.df.to_dict("records")
         for index, item in enumerate(info_list, 1):
             for key, value in item.items():
                 if value == value:
                     if "goods" in key:
-                        self._dictionary["wealth_" + str(index)]["goods"]["popneed_" + key.split(".")[-1]] = str(round(value))
+                        self._dictionary["wealth_" + str(index)]["goods"]["popneed_" + key.split(".")[-1]] = str(
+                            round(value))
                     else:
                         self._dictionary["wealth_" + str(index)][key] = str(value)
                 else:
@@ -67,6 +76,25 @@ class BuyPackages:
         with open(path, "w") as file:
             file.write(string)
 
+        tmp_transforms = self._transforms
+        self._transforms = {}
+        for function, query in tmp_transforms.values():
+            self.apply_transformation(function, query)
+
+    def apply_transformation(self, transformation_function, query):
+        transformation_function(self.df, "goods")
+        name = transformation_function.__name__
+        if "forward" in name:
+            inverse_function = getattr(Transform, '_'.join(name.split('_')[:-1] + ["inverse"]))
+        elif "inverse" in name:
+            inverse_function = getattr(Transform, '_'.join(name.split('_')[:-1] + ["forward"]))
+
+        if self._transforms.get(inverse_function.__name__):
+            del self._transforms[inverse_function.__name__]
+        else:
+            self._transforms[inverse_function.__name__] = (inverse_function, query)
+
+        print(self._transforms)
 
 class DashBuyPackages(BuyPackages):
 
@@ -99,3 +127,5 @@ class DashBuyPackages(BuyPackages):
         for key, index in self.figure_traces.items():
             if key in cell["column_id"]:
                 patched_figure["data"][index]["y"][cell["row"]] = data.iat[cell["row"], 0]
+
+
