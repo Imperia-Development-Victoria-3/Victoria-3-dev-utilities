@@ -1,13 +1,12 @@
 This is the public repository of Babylon Development focused on providing developers with tools to better mod Victoria games
 
 To launch the software you require a:
-	* python>=3.7
+ - python>=3.7
 
-command to install the requirements
-	`python -m pip install -r requirements.txt`
+To install the requirements:
+ - `python -m pip install -r requirements.txt`
 
+To start simply run:
+ - `python main.py`
 
-simply run:
-	`python main.py`
-
-and go to the specified website in your favorite browser (usually http://127.0.0.1:8050/)
+go to the specified website in your favorite browser (usually http://127.0.0.1:8050/)
