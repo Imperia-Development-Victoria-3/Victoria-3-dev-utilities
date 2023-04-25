@@ -13,7 +13,7 @@ class Transform:
         """
         target_data = data.filter(like=query_target, axis=1)
         sums = target_data.sum(axis=1)
-        percentages = target_data.div(sums, axis=0).mul(100)
+        percentages = target_data.div(sums, axis=0)
         data[percentages.columns] = percentages
         data.insert(0, query_target[:-1] + "-total", sums)
 
@@ -29,7 +29,7 @@ class Transform:
         sums = data[query_target[:-1] + '-total']
         data.drop(query_target[:-1] + '-total', axis=1, inplace=True)
         target_data = data.filter(like=query_target, axis=1)
-        numbers = target_data.multiply(sums, axis=0).div(100)
+        numbers = target_data.multiply(sums, axis=0)
         data[numbers.columns] = numbers
 
     @staticmethod

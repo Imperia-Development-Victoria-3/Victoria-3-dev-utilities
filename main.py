@@ -1,7 +1,9 @@
 from dash import Dash, dcc, html, Input, Output, Patch, dash_table, State
+from dash.dash_table import FormatTemplate
+from dash.dash_table.Format import Format, Scheme, Trim
 from random import seed
+
 from parse_encoder import parse_text_file, parse_text
-import numpy as np
 from data_formats.buy_packages import DashBuyPackages
 from data_utils.transformation import Transform
 from dash.exceptions import PreventUpdate
@@ -12,7 +14,7 @@ seed(0)
 app = Dash(__name__)
 dictionary = parse_text_file("00_buy_packages.txt")
 buy_packages = DashBuyPackages(dictionary)
-buy_packages.apply_transformation(Transform.percentage_forward, "goods")
+buy_packages.apply_transformation(Transform.percentage_forward, "goods.")
 
 app.layout = html.Div([
     html.Div(id="hidden-output", style={"display": "none"}),
@@ -23,7 +25,8 @@ app.layout = html.Div([
     html.Br(),
     dash_table.DataTable(
         id='editable-table',
-        columns=[{"name": i, "id": i} for i in buy_packages.df.columns],
+        columns=[{"name": i, "id": i, "type": 'numeric', "format": FormatTemplate.percentage(2)} for i in
+                 buy_packages.df.columns],
         data=buy_packages.df.to_dict("records"),
         editable=True,
         style_table={'height': '200px', 'overflowY': 'auto'}
@@ -67,17 +70,32 @@ def update_output(n_clicks):
 
 @app.callback(
     Output('editable-table', 'data', allow_duplicate=True),
+    Output('editable-table', 'columns'),
+    Output('buy-packages-plot', 'figure', allow_duplicate=True),
+    Output('normalize-button', 'hidden'),
     Input('table-number-type', 'value'),
     prevent_initial_call=True,
 )
 def update_output(value):
     if value == "Percentage":
         buy_packages.apply_transformation(Transform.percentage_forward, 'goods.')
+        columns = [
+            {"name": i, "id": i, "type": 'numeric', "format": FormatTemplate.percentage(2)} for i
+            in buy_packages.df.columns]
+        hidden = False
     elif value == "Absolute":
         buy_packages.apply_transformation(Transform.percentage_inverse, 'goods.')
+        columns = [
+            {"name": i, "id": i, "type": 'numeric', "format": Format(precision=2, scheme=Scheme.fixed, trim=Trim.yes)}
+            for i in buy_packages.df.columns]
+
+        hidden = True
     else:
         raise NotImplementedError(value + " not implemented")
-    return buy_packages.df.to_dict("records")
+
+    figure = buy_packages.get_ploty_plot("goods.", "area")
+
+    return buy_packages.df.to_dict("records"), columns, figure, hidden
 
 
 @app.callback(

@@ -82,7 +82,7 @@ class BuyPackages:
             self.apply_transformation(function, query)
 
     def apply_transformation(self, transformation_function, query):
-        transformation_function(self.df, "goods")
+        transformation_function(self.df, "goods.")
         name = transformation_function.__name__
         if "forward" in name:
             inverse_function = getattr(Transform, '_'.join(name.split('_')[:-1] + ["inverse"]))
@@ -94,7 +94,6 @@ class BuyPackages:
         else:
             self._transforms[inverse_function.__name__] = (inverse_function, query)
 
-        print(self._transforms)
 
 class DashBuyPackages(BuyPackages):
 
