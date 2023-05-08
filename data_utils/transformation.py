@@ -17,6 +17,10 @@ class Transform:
         data[percentages.columns] = percentages
         data.insert(0, query_target[:-1] + "-total", sums)
 
+        if 'is_percentage' not in data._metadata:
+            data._metadata += ['is_percentage']
+        data.is_percentage = True
+
     @staticmethod
     def percentage_inverse(data, query_target):
         """
@@ -31,6 +35,10 @@ class Transform:
         target_data = data.filter(like=query_target, axis=1)
         numbers = target_data.multiply(sums, axis=0)
         data[numbers.columns] = numbers
+
+        if 'is_percentage' not in data._metadata:
+            data._metadata += ['is_percentage']
+        data.is_percentage = False
 
     @staticmethod
     def normalize(data, query_target):

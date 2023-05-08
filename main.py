@@ -25,8 +25,7 @@ app.layout = html.Div([
     html.Br(),
     dash_table.DataTable(
         id='editable-table',
-        columns=[{"name": i, "id": i, "type": 'numeric', "format": FormatTemplate.percentage(2)} for i in
-                 buy_packages.df.columns],
+        columns=buy_packages.get_table_formatting(),
         data=buy_packages.df.to_dict("records"),
         editable=True,
         style_table={'height': '200px', 'overflowY': 'auto'}
@@ -76,26 +75,20 @@ def update_output(n_clicks):
     Input('table-number-type', 'value'),
     prevent_initial_call=True,
 )
-def update_output(value):
+def update_table_type(value):
     if value == "Percentage":
         buy_packages.apply_transformation(Transform.percentage_forward, 'goods.')
-        columns = [
-            {"name": i, "id": i, "type": 'numeric', "format": FormatTemplate.percentage(2)} for i
-            in buy_packages.df.columns]
-        hidden = False
+        normalize_button_hidden = False
     elif value == "Absolute":
         buy_packages.apply_transformation(Transform.percentage_inverse, 'goods.')
-        columns = [
-            {"name": i, "id": i, "type": 'numeric', "format": Format(precision=2, scheme=Scheme.fixed, trim=Trim.yes)}
-            for i in buy_packages.df.columns]
-
-        hidden = True
+        normalize_button_hidden = True
     else:
         raise NotImplementedError(value + " not implemented")
 
+    columns = buy_packages.get_table_formatting()
     figure = buy_packages.get_ploty_plot("goods.", "area")
 
-    return buy_packages.df.to_dict("records"), columns, figure, hidden
+    return buy_packages.df.to_dict("records"), columns, figure, normalize_button_hidden
 
 
 @app.callback(

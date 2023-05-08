@@ -1,3 +1,6 @@
+from dash.dash_table.Format import Format, Scheme, Trim
+from dash.dash_table import FormatTemplate
+
 from parse_decoder import decode_dictionary
 import pandas as pd
 import plotly.express as px
@@ -127,4 +130,19 @@ class DashBuyPackages(BuyPackages):
             if key in cell["column_id"]:
                 patched_figure["data"][index]["y"][cell["row"]] = data.iat[cell["row"], 0]
 
-
+    def get_table_formatting(self):
+        if self.df.is_percentage:
+            columns = []
+            for name in self.df.columns:
+                if "political" in name or "total" in name:
+                    columns.append({"name": name, "id": name, "type": 'numeric',
+                                    "format": Format(precision=2, scheme=Scheme.fixed, trim=Trim.yes)})
+                else:
+                    columns.append(
+                        {"name": name, "id": name, "type": 'numeric', "format": FormatTemplate.percentage(2)})
+        else:
+            columns = [
+                {"name": i, "id": i, "type": 'numeric',
+                 "format": Format(precision=2, scheme=Scheme.fixed, trim=Trim.yes)}
+                for i in self.df.columns]
+        return columns
