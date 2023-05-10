@@ -14,7 +14,7 @@ class BuyPackages:
         self._dictionary = dictionary
         self._interpret_buy_packages(dictionary)
 
-        self._transforms = {}
+        self._transforms = dict()
 
     def _interpret_buy_packages(self, dictionary):
         self._dictionary = dictionary
@@ -53,10 +53,9 @@ class BuyPackages:
         self.df.at[index, key] = value
 
     def export_paradox(self, path):
-        tmp_transforms = self._transforms
-        self._transforms = {}
-        for function, query in tmp_transforms.values():
-            self.apply_transformation(function, query)
+
+        for transform in sorted(self._transforms, key=lambda t: t.order):
+            transform.apply(self.df, reverse=True)
 
         info_list = self.df.to_dict("records")
         for index, item in enumerate(info_list, 1):
@@ -79,23 +78,58 @@ class BuyPackages:
         with open(path, "w") as file:
             file.write(string)
 
-        tmp_transforms = self._transforms
-        self._transforms = {}
-        for function, query in tmp_transforms.values():
-            self.apply_transformation(function, query)
+        for transform in sorted(self._transforms, key=lambda t: t.order, reverse=True):
+            transform.apply(self.df)
 
-    def apply_transformation(self, transformation_function, query):
-        transformation_function(self.df, "goods.")
-        name = transformation_function.__name__
-        if "forward" in name:
-            inverse_function = getattr(Transform, '_'.join(name.split('_')[:-1] + ["inverse"]))
-        elif "inverse" in name:
-            inverse_function = getattr(Transform, '_'.join(name.split('_')[:-1] + ["forward"]))
-
-        if self._transforms.get(inverse_function.__name__):
-            del self._transforms[inverse_function.__name__]
+    def apply_transformation(self, transformation: Transform, forward=True):
+        print("forward", forward)
+        transformation.is_forward = forward
+        if self._transforms.get(transformation):
+            transformation = self._transforms[transformation]
+            # print("now false?", bool(self._transforms.get(transformation)))
+            if forward == transformation.is_forward:
+                raise Exception("Transformation already in desired state")
+            else:
+                self.remove_transformation(transformation)
         else:
-            self._transforms[inverse_function.__name__] = (inverse_function, query)
+            self.add_transformation(transformation)
+
+    def remove_transformation(self, transformation: Transform):
+        if not self._transforms.get(transformation):
+            raise Exception("Transformation doesn't exist")
+
+        for transform in sorted(self._transforms, key=lambda t: t.order):
+            if transform.order < transformation.order:
+                transform.apply(self.df, reverse=True)
+            if transform == transformation:
+                transform.apply(self.df, reverse=True)
+                del self._transforms[transform]
+                break
+
+        for transform in sorted(self._transforms, key=lambda t: t.order, reverse=True):
+            if transform.order < transformation.order:
+                transform.apply(self.df)
+
+    def add_transformation(self, transformation: Transform):
+        if self._transforms.get(transformation):
+            raise Exception("Transformation already exists")
+
+        for transform in sorted(self._transforms, key=lambda t: t.order):
+            if transform.order < transformation.order:
+                transform.apply(self.df, reverse=True)
+            if transform.order == transformation.order:
+                transformation.apply(self.df)
+                self._transforms[transformation] = transformation
+                break
+
+        if not self._transforms:
+            transformation.apply(self.df)
+            self._transforms[transformation] = transformation
+            print(self.df.is_percentage)
+
+        for transform in sorted(self._transforms, key=lambda t: t.order, reverse=True):
+            if transform.order < transformation.order:
+                transform.apply(self.df)
 
 
 class DashBuyPackages(BuyPackages):

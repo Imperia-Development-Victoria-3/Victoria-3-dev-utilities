@@ -7,6 +7,10 @@ def decode_dictionary(dictionary, depth=0):
         if type(value) == dict:
             result += "\t" * depth + key + " = " + "{" + "\n"
             result += decode_dictionary(value, depth + 1)
+        elif type(value) == list:
+            for element in value:
+                result += "\t" * depth + key + " = " + "{" + "\n"
+                result += decode_dictionary(element, depth + 1)
         elif type(value) == str:
             result += "\t" * depth + key + " = " + value + "\n"
         elif type(value) == bool:

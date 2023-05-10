@@ -1,20 +1,16 @@
 from dash import Dash, dcc, html, Input, Output, Patch, dash_table, State
 from dash.dash_table import FormatTemplate
 from dash.dash_table.Format import Format, Scheme, Trim
-from random import seed
 
 from parse_encoder import parse_text_file, parse_text
 from data_formats.buy_packages import DashBuyPackages
-from data_utils.transformation import Transform
+from data_utils.transformation import Transform, Percentage, PriceCompensation
 from dash.exceptions import PreventUpdate
-
-# For the documentation to always render the same values
-seed(0)
 
 app = Dash(__name__)
 dictionary = parse_text_file("00_buy_packages.txt")
 buy_packages = DashBuyPackages(dictionary)
-buy_packages.apply_transformation(Transform.percentage_forward, "goods.")
+buy_packages.apply_transformation(Percentage("goods."))
 
 app.layout = html.Div([
     html.Div(id="hidden-output", style={"display": "none"}),
@@ -77,10 +73,10 @@ def update_output(n_clicks):
 )
 def update_table_type(value):
     if value == "Percentage":
-        buy_packages.apply_transformation(Transform.percentage_forward, 'goods.')
+        buy_packages.apply_transformation(Percentage('goods.'))
         normalize_button_hidden = False
     elif value == "Absolute":
-        buy_packages.apply_transformation(Transform.percentage_inverse, 'goods.')
+        buy_packages.apply_transformation(Percentage('goods.'), forward=False)
         normalize_button_hidden = True
     else:
         raise NotImplementedError(value + " not implemented")
