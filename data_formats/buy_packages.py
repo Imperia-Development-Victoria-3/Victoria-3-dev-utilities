@@ -44,8 +44,7 @@ class BuyPackages:
             raise ValueError(error_message)
 
         filtered = self.df.filter(like=key, axis=1)
-        for row in filtered.itertuples(index=False):
-            yield row
+        yield from filtered.itertuples(index=False)
 
     def update_value(self, key, index, value):
         if value:
@@ -82,11 +81,9 @@ class BuyPackages:
             transform.apply(self.df)
 
     def apply_transformation(self, transformation: Transform, forward=True):
-        print("forward", forward)
         transformation.is_forward = forward
         if self._transforms.get(transformation):
             transformation = self._transforms[transformation]
-            # print("now false?", bool(self._transforms.get(transformation)))
             if forward == transformation.is_forward:
                 raise Exception("Transformation already in desired state")
             else:
@@ -117,15 +114,13 @@ class BuyPackages:
         for transform in sorted(self._transforms, key=lambda t: t.order):
             if transform.order < transformation.order:
                 transform.apply(self.df, reverse=True)
-            if transform.order == transformation.order:
+            else:
                 transformation.apply(self.df)
                 self._transforms[transformation] = transformation
                 break
-
-        if not self._transforms:
+        else:
             transformation.apply(self.df)
             self._transforms[transformation] = transformation
-            print(self.df.is_percentage)
 
         for transform in sorted(self._transforms, key=lambda t: t.order, reverse=True):
             if transform.order < transformation.order:
@@ -157,7 +152,7 @@ class DashBuyPackages(BuyPackages):
         self.figure_traces = {trace.name: i for i, trace in enumerate(fig["data"])}
         return fig
 
-    def patch_ploty_plot(self, cell, patched_figure, percentages=False):
+    def patch_ploty_plot(self, cell, patched_figure):
         # if not percentages:
         data = self.df.filter(like=cell["column_id"], axis=1)
         for key, index in self.figure_traces.items():

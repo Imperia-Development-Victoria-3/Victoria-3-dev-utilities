@@ -1,8 +1,3 @@
-import pandas as pd
-from data_formats.goods import Goods
-from data_formats.pop_needs import PopNeeds
-
-
 class TransformNoInverse:
     @staticmethod
     def normalize(data, query_target):
@@ -39,6 +34,8 @@ class Transform:
 
 class PriceCompensation(Transform):
     order = 1
+    from data_formats import Goods
+    from data_formats import PopNeeds
 
     def __init__(self, goods: Goods, needs: PopNeeds, is_forward: bool = True):
         super().__init__(is_forward)
@@ -49,25 +46,28 @@ class PriceCompensation(Transform):
 
     def forward(self, data):
         for column in data.columns:
-            if self.need_to_good.get(column):
-                good = self.need_to_good[column]
-                price = self.goods[good]["cost"]
-                data[column] *= price
+            original_name = column.split(".")[-1]
+            if self.need_to_good.get(original_name):
+                good = self.need_to_good[original_name]
+                price = float(self.goods[good]["cost"])
+                data[column] = data[column].multiply(price)
+
 
     def inverse(self, data):
         for column in data.columns:
-            if self.need_to_good.get(column):
-                good = self.need_to_good[column]
-                price = self.goods[good]["cost"]
-                data[column] /= price
+            original_name = column.split(".")[-1]
+            if self.need_to_good.get(original_name):
+                good = self.need_to_good[original_name]
+                price = float(self.goods[good]["cost"])
+                data[column] = data[column].div(price)
 
     def __hash__(self):
-        return hash(tuple(sorted([(self.goods[value].cost, key) for key, value in self.need_to_good.items()])))
+        return hash(tuple(sorted([(self.goods[value]["cost"], key) for key, value in self.need_to_good.items()])))
 
     def __eq__(self, other):
         if isinstance(other, PriceCompensation):
-            return tuple(sorted([(self.goods[value].cost, key) for key, value in self.need_to_good.items()])) == tuple(
-                sorted([(self.goods[value].cost, key) for key, value in self.need_to_good.items()]))
+            return tuple(sorted([(self.goods[value]["cost"], key) for key, value in self.need_to_good.items()])) == tuple(
+                sorted([(self.goods[value]["cost"], key) for key, value in self.need_to_good.items()]))
         return False
 
 
@@ -79,7 +79,6 @@ class Percentage(Transform):
         self.query = query
 
     def forward(self, data):
-        print("forward")
         target_data = data.filter(like=self.query, axis=1)
         sums = target_data.sum(axis=1)
         percentages = target_data.div(sums, axis=0)
@@ -91,7 +90,6 @@ class Percentage(Transform):
         data.is_percentage = True
 
     def inverse(self, data):
-        print("backward")
         sums = data[self.query[:-1] + '-total']
         data.drop(self.query[:-1] + '-total', axis=1, inplace=True)
         target_data = data.filter(like=self.query, axis=1)

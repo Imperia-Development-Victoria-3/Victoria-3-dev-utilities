@@ -3,20 +3,33 @@ from dash.dash_table import FormatTemplate
 from dash.dash_table.Format import Format, Scheme, Trim
 
 from parse_encoder import parse_text_file, parse_text
-from data_formats.buy_packages import DashBuyPackages
-from data_utils.transformation import Transform, Percentage, PriceCompensation
+from data_utils.transformation import TransformNoInverse, Percentage, PriceCompensation
 from dash.exceptions import PreventUpdate
+from data_formats import Goods, PopNeeds, DashBuyPackages
 
 app = Dash(__name__)
 dictionary = parse_text_file("00_buy_packages.txt")
 buy_packages = DashBuyPackages(dictionary)
 buy_packages.apply_transformation(Percentage("goods."))
 
+dictionary = parse_text_file("00_goods.txt")
+goods = Goods(dictionary)
+
+dictionary = parse_text_file("00_pop_needs.txt")
+pop_needs = PopNeeds(dictionary)
+
 app.layout = html.Div([
     html.Div(id="hidden-output", style={"display": "none"}),
     dcc.Store(id='table-selected-prev'),
     html.Button('Save copy', id='save-button', n_clicks=0),
     html.Button('Normalize', id='normalize-button', n_clicks=0),
+    dcc.Checklist(
+        options={
+            'price': 'Apply Price Adjustment',
+        },
+        value=[],
+        id="transform options"
+    ),
     dcc.RadioItems(['Percentage', 'Absolute'], 'Percentage', id='table-number-type'),
     html.Br(),
     dash_table.DataTable(
@@ -43,6 +56,24 @@ def store_previous_data(previous_data):
 
 
 @app.callback(
+    Output('editable-table', 'data', allow_duplicate=True),
+    Output('buy-packages-plot', 'figure', allow_duplicate=True),
+    Input('transform options', "value"),
+    prevent_initial_call=True
+    # Output('buy-packages-plot', 'figure', allow_duplicate=True),
+)
+def update_transformations(transforms):
+    transformation = PriceCompensation(goods, pop_needs)
+
+    if 'price' in transforms:
+        buy_packages.apply_transformation(transformation)
+    else:
+        buy_packages.apply_transformation(transformation, forward=False)
+
+    return buy_packages.df.to_dict("records"), buy_packages.get_ploty_plot("goods.", "area")
+
+
+@app.callback(
     Output('hidden-output', 'children'),
     Input('save-button', 'n_clicks'),
     prevent_initial_call=True)
@@ -59,8 +90,8 @@ def update_output(n_clicks):
 )
 def update_output(n_clicks):
     if n_clicks > 0:
-        Transform.normalize(buy_packages.df, "goods.")
-    return buy_packages.df.to_dict("records")
+        TransformNoInverse.normalize(buy_packages.df, "goods.")
+    return buy_packages.df.to_dict("records"),
 
 
 @app.callback(
@@ -88,10 +119,11 @@ def update_table_type(value):
 
 
 @app.callback(
-    Output('buy-packages-plot', 'figure'),
+    Output('buy-packages-plot', 'figure', allow_duplicate=True),
     Input('editable-table', 'data'),
     State('editable-table', 'active_cell'),
-    State('table-selected-prev', 'data')
+    State('table-selected-prev', 'data'),
+    prevent_initial_call=True
 )
 def update_buy_packages_plot(data, active_cell, prev_active_cell):
     cells = [active_cell, prev_active_cell]
