@@ -8,3 +8,7 @@ from dash.exceptions import PreventUpdate
 from data_formats import Goods, PopNeeds, DashBuyPackages
 
 from app import app
+
+layout = [
+
+]

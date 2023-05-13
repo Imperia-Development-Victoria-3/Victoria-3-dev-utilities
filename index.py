@@ -25,8 +25,8 @@ app.layout = html.Div([
 def display_page(pathname):
     if pathname == '/apps/app_buy_packages.py':
         return app_buy_packages.layout
-    # elif pathname == '/apps/app2':
-    #     return app2.layout
+    elif pathname == '/apps/app_building_designer.py':
+        return app2.layout
     else:
         return home_page
 

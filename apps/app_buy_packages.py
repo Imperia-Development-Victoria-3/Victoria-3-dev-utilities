@@ -63,16 +63,13 @@ def store_previous_data(previous_data):
     Output('buy-packages-plot', 'figure', allow_duplicate=True),
     Input('transform options', "value"),
     prevent_initial_call=True
-    # Output('buy-packages-plot', 'figure', allow_duplicate=True),
 )
 def update_transformations(transforms):
     transformation = PriceCompensation(goods, pop_needs)
-
     if 'price' in transforms:
         buy_packages.apply_transformation(transformation)
     else:
         buy_packages.apply_transformation(transformation, forward=False)
-
     return buy_packages.df.to_dict("records"), buy_packages.get_ploty_plot("goods.", "area")
 
 
@@ -94,7 +91,7 @@ def update_output(n_clicks):
 def update_output(n_clicks):
     if n_clicks > 0:
         TransformNoInverse.normalize(buy_packages.df, "goods.")
-    return buy_packages.df.to_dict("records"),
+    return buy_packages.df.to_dict("records")
 
 
 @app.callback(
