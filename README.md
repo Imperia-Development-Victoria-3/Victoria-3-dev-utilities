@@ -7,6 +7,6 @@ To install the requirements:
  - `python -m pip install -r requirements.txt`
 
 To start simply run:
- - `python main.py`
+ - `python index.py`
 
 go to the specified website in your favorite browser (usually http://127.0.0.1:8050/)
