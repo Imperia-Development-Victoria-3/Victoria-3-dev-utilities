@@ -7,9 +7,10 @@ from data_utils.transformation import TransformNoInverse, Percentage, PriceCompe
 from dash.exceptions import PreventUpdate
 from data_formats import Goods, PopNeeds, DashBuyPackages
 
+from app import app
+
 standard_victoria_3_path = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game"
 
-app = Dash(__name__)
 dictionary = parse_text_file(standard_victoria_3_path + "\\common\\buy_packages\\00_buy_packages.txt")
 buy_packages = DashBuyPackages(dictionary)
 buy_packages.apply_transformation(Percentage("goods."))
@@ -20,7 +21,7 @@ goods = Goods(dictionary)
 dictionary = parse_text_file(standard_victoria_3_path + "\\common\\pop_needs\\00_pop_needs.txt")
 pop_needs = PopNeeds(dictionary)
 
-app.layout = html.Div([
+layout = html.Div([
     html.Div(id="hidden-output", style={"display": "none"}),
     dcc.Store(id='table-selected-prev'),
     html.Button('Save copy', id='save-button', n_clicks=0),
@@ -134,9 +135,5 @@ def update_buy_packages_plot(data, active_cell, prev_active_cell):
         if cell:
             value = data[cell["row"]].get(cell["column_id"], None)
             buy_packages.update_value(cell["column_id"], cell["row"], value)
-            buy_packages.patch_ploty_plot(cell, patched_figure, False)
+            buy_packages.patch_ploty_plot(cell, patched_figure)
     return patched_figure
-
-
-if __name__ == '__main__':
-    app.run_server(debug=True)
