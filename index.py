@@ -1,18 +1,11 @@
-from dash import dcc, html, Input, Output
+from constants import GlobalState
+
+GlobalState.reset()
+
+from dash import dcc, html, Input, Output, dash
+from apps import app_buy_packages, app_building_designer, app_index_page
 
 from app import app
-from apps import app_buy_packages
-
-# Define the home page layout
-home_page = html.Div([
-    html.H1('Welcome to the multi-page app'),
-    html.H2('Please choose an app:'),
-    html.Div([
-        dcc.Link('Go to Buy Package app', href='/apps/app_buy_packages.py'),
-        html.Br(),
-        dcc.Link('Go to App 2', href='/apps/app2'),
-    ]),
-])
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
@@ -26,10 +19,11 @@ def display_page(pathname):
     if pathname == '/apps/app_buy_packages.py':
         return app_buy_packages.layout
     elif pathname == '/apps/app_building_designer.py':
-        return app2.layout
+        return app_building_designer.layout
     else:
-        return home_page
+        return app_index_page.layout
 
 
 if __name__ == '__main__':
+    GlobalState.reset()
     app.run_server(debug=True)

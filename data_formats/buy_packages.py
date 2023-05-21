@@ -5,7 +5,7 @@ from parse_decoder import decode_dictionary
 import pandas as pd
 import plotly.express as px
 import copy
-from data_utils.transformation import Transform
+from data_utils import Transform
 
 
 class BuyPackages:

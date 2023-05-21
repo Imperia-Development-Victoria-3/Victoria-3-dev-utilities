@@ -1,25 +1,14 @@
-from dash import Dash, dcc, html, Input, Output, Patch, dash_table, State
-from dash.dash_table import FormatTemplate
-from dash.dash_table.Format import Format, Scheme, Trim
+from dash import dcc, html, Input, Output, Patch, dash_table, State
 
-from parse_encoder import parse_text_file, parse_text
-from data_utils.transformation import TransformNoInverse, Percentage, PriceCompensation
+
+from data_utils import TransformNoInverse
+from data_utils.transformation_types import Percentage, PriceCompensation
 from dash.exceptions import PreventUpdate
-from data_formats import Goods, PopNeeds, DashBuyPackages
+from constants import GlobalState
 
 from app import app
 
-standard_victoria_3_path = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game"
 
-dictionary = parse_text_file(standard_victoria_3_path + "\\common\\buy_packages\\00_buy_packages.txt")
-buy_packages = DashBuyPackages(dictionary)
-buy_packages.apply_transformation(Percentage("goods."))
-
-dictionary = parse_text_file(standard_victoria_3_path + "\\common\\goods\\00_goods.txt")
-goods = Goods(dictionary)
-
-dictionary = parse_text_file(standard_victoria_3_path + "\\common\\pop_needs\\00_pop_needs.txt")
-pop_needs = PopNeeds(dictionary)
 
 layout = html.Div([
     html.Div(id="hidden-output", style={"display": "none"}),
@@ -37,14 +26,14 @@ layout = html.Div([
     html.Br(),
     dash_table.DataTable(
         id='editable-table',
-        columns=buy_packages.get_table_formatting(),
-        data=buy_packages.df.to_dict("records"),
+        columns=GlobalState.buy_packages.get_table_formatting(),
+        data=GlobalState.buy_packages.df.to_dict("records"),
         editable=True,
         style_table={'height': '200px', 'overflowY': 'auto'}
     ),
     html.Br(),
     dcc.Graph(
-        figure=buy_packages.get_ploty_plot("goods.", "area"),
+        figure=GlobalState.buy_packages.get_ploty_plot("goods.", "area"),
         id='buy-packages-plot',
         style={'height': '700px'})
 ])
@@ -65,12 +54,12 @@ def store_previous_data(previous_data):
     prevent_initial_call=True
 )
 def update_transformations(transforms):
-    transformation = PriceCompensation(goods, pop_needs)
+    transformation = PriceCompensation(GlobalState.goods, GlobalState.pop_needs)
     if 'price' in transforms:
-        buy_packages.apply_transformation(transformation)
+        GlobalState.buy_packages.apply_transformation(transformation)
     else:
-        buy_packages.apply_transformation(transformation, forward=False)
-    return buy_packages.df.to_dict("records"), buy_packages.get_ploty_plot("goods.", "area")
+        GlobalState.buy_packages.apply_transformation(transformation, forward=False)
+    return GlobalState.buy_packages.df.to_dict("records"), GlobalState.buy_packages.get_ploty_plot("goods.", "area")
 
 
 @app.callback(
@@ -79,7 +68,7 @@ def update_transformations(transforms):
     prevent_initial_call=True)
 def update_output(n_clicks):
     if n_clicks > 0:
-        buy_packages.export_paradox("00_buy_packages_copy.txt")
+        GlobalState.buy_packages.export_paradox("00_buy_packages_copy.txt")
     raise PreventUpdate
 
 
@@ -90,8 +79,8 @@ def update_output(n_clicks):
 )
 def update_output(n_clicks):
     if n_clicks > 0:
-        TransformNoInverse.normalize(buy_packages.df, "goods.")
-    return buy_packages.df.to_dict("records")
+        TransformNoInverse.normalize(GlobalState.buy_packages.df, "goods.")
+    return GlobalState.buy_packages.df.to_dict("records")
 
 
 @app.callback(
@@ -104,18 +93,18 @@ def update_output(n_clicks):
 )
 def update_table_type(value):
     if value == "Percentage":
-        buy_packages.apply_transformation(Percentage('goods.'))
+        GlobalState.buy_packages.apply_transformation(Percentage('goods.'))
         normalize_button_hidden = False
     elif value == "Absolute":
-        buy_packages.apply_transformation(Percentage('goods.'), forward=False)
+        GlobalState.buy_packages.apply_transformation(Percentage('goods.'), forward=False)
         normalize_button_hidden = True
     else:
         raise NotImplementedError(value + " not implemented")
 
-    columns = buy_packages.get_table_formatting()
-    figure = buy_packages.get_ploty_plot("goods.", "area")
+    columns = GlobalState.buy_packages.get_table_formatting()
+    figure = GlobalState.buy_packages.get_ploty_plot("goods.", "area")
 
-    return buy_packages.df.to_dict("records"), columns, figure, normalize_button_hidden
+    return GlobalState.buy_packages.df.to_dict("records"), columns, figure, normalize_button_hidden
 
 
 @app.callback(
@@ -131,6 +120,6 @@ def update_buy_packages_plot(data, active_cell, prev_active_cell):
     for cell in cells:
         if cell:
             value = data[cell["row"]].get(cell["column_id"], None)
-            buy_packages.update_value(cell["column_id"], cell["row"], value)
-            buy_packages.patch_ploty_plot(cell, patched_figure)
+            GlobalState.buy_packages.update_value(cell["column_id"], cell["row"], value)
+            GlobalState.buy_packages.patch_ploty_plot(cell, patched_figure)
     return patched_figure

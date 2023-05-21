@@ -16,11 +16,9 @@ def decode_dictionary(dictionary, depth=0):
         elif type(value) == bool:
             result += "\t" * depth + key + "\n"
         elif type(key) == int:
-            if value[3] == PART_LINE_COMMENT_TYPE:
-                # print("part: ", value[2])
+            if value[3] == Constants.PART_LINE_COMMENT_TYPE:
                 result = result[:-1] + " " + value[2] + "\n"
-            if value[3] == FULL_LINE_COMMENT_TYPE:
-                # print("full: ", value[2])
+            if value[3] == Constants.FULL_LINE_COMMENT_TYPE:
                 result += value[2] + "\n"
     if depth > 0:
         result += "\t" * (depth - 1) + "}" + "\n"

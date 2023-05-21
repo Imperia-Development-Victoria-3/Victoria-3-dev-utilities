@@ -1,16 +1,16 @@
 import re
-from constants import *
+from constants import Constants
 
 symbol_searches = [
-    (r"([\w\.-]+)|(\"[^\n]+\")", WORD_TYPE),
-    (r"=", EQUAL_TYPE),
-    (r"{", BEGIN_DICT_TYPE),
-    (r"}", END_DICT_TYPE)
+    (r"([\w\.-]+)|(\"[^\n]+\")", Constants.WORD_TYPE),
+    (r"=", Constants.EQUAL_TYPE),
+    (r"{", Constants.BEGIN_DICT_TYPE),
+    (r"}", Constants.END_DICT_TYPE)
 ]
 
 comment_symbol_searches = [
-    (r"^[ \t]*#.*$", FULL_LINE_COMMENT_TYPE),
-    (r"#.*$", ALL_COMMENT_TYPE)
+    (r"^[ \t]*#.*$", Constants.FULL_LINE_COMMENT_TYPE),
+    (r"#.*$", Constants.ALL_COMMENT_TYPE)
 ]
 
 
@@ -58,19 +58,19 @@ def parse_text(file_string):
 
 
 def encode_symbol(symbols, stack, iteration):
-    while symbols[0][3] == PART_LINE_COMMENT_TYPE or symbols[0][3] == FULL_LINE_COMMENT_TYPE:
+    while symbols[0][3] == Constants.PART_LINE_COMMENT_TYPE or symbols[0][3] == Constants.FULL_LINE_COMMENT_TYPE:
         symbol = symbols.pop(0)
         stack[-1][iteration[0]] = symbol
         iteration[0] += 1
 
     symbol = symbols.pop(0)
-    if symbol[3] == WORD_TYPE:
+    if symbol[3] == Constants.WORD_TYPE:
         comments = []
-        while symbols[0][3] == PART_LINE_COMMENT_TYPE or symbols[0][3] == FULL_LINE_COMMENT_TYPE:
+        while symbols[0][3] == Constants.PART_LINE_COMMENT_TYPE or symbols[0][3] == Constants.FULL_LINE_COMMENT_TYPE:
             comments.append(symbols.pop(0))
 
-        if symbols[0][3] == EQUAL_TYPE:
-            if symbols[1][3] == BEGIN_DICT_TYPE:
+        if symbols[0][3] == Constants.EQUAL_TYPE:
+            if symbols[1][3] == Constants.BEGIN_DICT_TYPE:
                 dictionary = dict()
                 if not stack[-1].get(symbol[2]):
                     stack[-1][symbol[2]] = dictionary
@@ -80,31 +80,31 @@ def encode_symbol(symbols, stack, iteration):
                     stack[-1][symbol[2]] = [stack[-1][symbol[2]], dictionary]
 
                 stack.append(dictionary)
-            elif symbols[1][3] == WORD_TYPE:
+            elif symbols[1][3] == Constants.WORD_TYPE:
                 stack[-1][symbol[2]] = symbols[1][2]
             symbols.pop(0)
             symbols.pop(0)
-        elif symbols[0][3] == WORD_TYPE or symbols[0][3] == END_DICT_TYPE:
+        elif symbols[0][3] == Constants.WORD_TYPE or symbols[0][3] == Constants.END_DICT_TYPE:
             stack[-1][symbol[2]] = True
 
         for comment in comments:
             stack[-1][iteration[0]] = comment
             iteration[0] += 1
 
-    elif symbol[3] == END_DICT_TYPE:
+    elif symbol[3] == Constants.END_DICT_TYPE:
         stack.pop()
 
 
 def process_comments(file_string):
     comment_symbols = []
-    comment_symbols += [(match.start(), match.end(), match.group(), FULL_LINE_COMMENT_TYPE) for match in
+    comment_symbols += [(match.start(), match.end(), match.group(), Constants.FULL_LINE_COMMENT_TYPE) for match in
                         re.finditer(r"^[ \t]*#.*$", file_string, re.MULTILINE)]
 
     lookup = set()
     for fulline_comment in comment_symbols:
         lookup.add(fulline_comment[1])
 
-    comment_symbols += [(match.start(), match.end(), match.group(), PART_LINE_COMMENT_TYPE) for match in
+    comment_symbols += [(match.start(), match.end(), match.group(), Constants.PART_LINE_COMMENT_TYPE) for match in
                         re.finditer(r"#.*$", file_string, re.MULTILINE) if match.end() not in lookup]
     return comment_symbols
 
