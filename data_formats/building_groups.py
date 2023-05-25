@@ -1,5 +1,10 @@
-class BuildingGroup:
-    default_alues = {
+import copy
+import json
+from data_formats import DataFormat
+
+
+class BuildingGroups(DataFormat):
+    default_values = {
         "parent_group": "None",
         "always_possible": "no",
         "economy_of_scale": "no",
@@ -24,11 +29,38 @@ class BuildingGroup:
         "hires_unemployed_only": "no"
     }
 
-    def __init__(self, *args, **kwargs):
-        merged_dict = {}
-        for arg in args:
-            if isinstance(arg, dict):
-                merged_dict.update(arg)
+    def __init__(self, dictionary):
+        super().__init__(dictionary)
+        self.interpret()
+        self.keys = list(BuildingGroups.default_values.keys())
 
-        merged_dict.update(kwargs)
-        self.merged_dict = merged_dict
+    def overwrite_values(self, name, building_group, dictionary):
+        if building_group.get("parent_group"):
+            parent = building_group["parent_group"]
+            if not dictionary[parent].get("finished"):
+                self.overwrite_values(parent, dictionary[parent], dictionary)
+
+            new_building_group = copy.deepcopy(dictionary[parent])
+            for key, value in building_group.items():
+                new_building_group[key] = value
+        else:
+            new_building_group = copy.deepcopy(BuildingGroups.default_values)
+            for key, value in building_group.items():
+                new_building_group[key] = value
+
+        new_building_group["finished"] = True
+        dictionary[name] = new_building_group
+
+    def interpret(self):
+        self.data = DataFormat.copy_dict_with_string_keys(self._dictionary)
+
+        for name, building_group in self.data.items():
+            self.overwrite_values(name, building_group, self.data)
+
+
+if __name__ == '__main__':
+    from parse_encoder import parse_text_file
+
+    dictionary = parse_text_file("../00_building_groups.txt")
+    goods = BuildingGroups(dictionary)
+    print(list(goods.get_iterable()))

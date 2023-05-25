@@ -13,7 +13,7 @@ layout = html.Div([
     html.Div([
         dcc.Link('Go to Buy Package app', href='/apps/app_buy_packages.py'),
         html.Br(),
-        dcc.Link('Go to App 2', href='/apps/app2'),
+        dcc.Link('Go to Building Designer app', href='/apps/app_building_designer.py'),
     ]),
     html.Button('Select Game Folder', id='select-folder', n_clicks=0),
     html.Div(id='output-container-button', children=Constants.DEFAULT_GAME_PATH),
@@ -36,7 +36,11 @@ def select_folder_path(n_clicks):
     p = Process(target=select_folder, args=(q,))
     p.start()
     p.join()
-    path = os.path.normpath(q.get())
-    Constants.DEFAULT_GAME_PATH = path
-    GlobalState.reset()
-    return f'Selected folder: {path}'
+    path = q.get()
+    if path:
+        path = os.path.normpath(path)
+        Constants.DEFAULT_GAME_PATH = path
+        GlobalState.reset()
+        return f'Selected folder: {path}'
+    else:
+        return f'Selected folder: {Constants.DEFAULT_GAME_PATH}'

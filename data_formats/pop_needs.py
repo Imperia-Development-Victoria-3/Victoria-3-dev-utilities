@@ -53,5 +53,4 @@ if __name__ == '__main__':
     dictionary = parse_text_file("../00_pop_needs.txt")
     pop_needs = PopNeeds(dictionary)
     print(list(pop_needs.get_iterable("default", return_path=True)))
-    # print(dictionary)
-    # print(decode_dictionary(dictionary))
+
