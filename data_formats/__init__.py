@@ -1,4 +1,4 @@
-from .base_data import DataFormat
+from .base_data import DataFormat, DataFormatFolder
 from .buy_packages import BuyPackages, DashBuyPackages
 from .goods import Goods
 from .pop_needs import PopNeeds

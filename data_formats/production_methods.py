@@ -1,4 +1,4 @@
-from data_formats import DataFormat
+from data_formats import DataFormat, DataFormatFolder
 from parse_encoder import parse_text_file
 import os
 
@@ -6,30 +6,27 @@ import os
 class ProductionMethods(DataFormat):
     def __init__(self, dictionary: dict, technologies_folder: "TechnologiesFolder" = None):
         super().__init__(dictionary)
-        self.technologies_folder = technologies_folder
+        self._technologies_folder = technologies_folder
         self.interpret()
 
     def interpret(self):
-        self.data = DataFormat.copy_dict_with_string_keys(self._dictionary)
-        if self.technologies_folder:
+        super().interpret()
+        if self._technologies_folder:
             for key, value in self.data.items():
                 if value.get("unlocking_technologies"):
                     unlocking_technologies = value["unlocking_technologies"]
                     for technology in unlocking_technologies:
-                        technology_object = list(
-                            self.technologies_folder.get_iterable(technology, type_filter=dict))
-                        unlocking_technologies[technology] = technology_object[0]
+                        unlocking_technologies[technology] = self._technologies_folder[technology]
 
 
-class ProductionMethodsFolder(DataFormat):
+class ProductionMethodsFolder(DataFormatFolder):
 
     def __init__(self, folder: str, technologies_folder: "TechnologiesFolder" = None,
                  folder_of: type = ProductionMethods):
-        super().__init__()
-        self.folder = folder
-        self.folder_of = folder_of
+        super().__init__(folder, folder_of)
         self.technologies_folder = technologies_folder
         self.interpret()
+        self.construct_refs()
 
     def interpret(self):
         for dirpath, dirnames, filenames in os.walk(self.folder):
@@ -39,11 +36,6 @@ class ProductionMethodsFolder(DataFormat):
                     dictionary = parse_text_file(file_path)
                     building_file = ProductionMethods(dictionary, self.technologies_folder)
                     self.data[filename] = building_file
-
-    def get_iterable(self, key1="root", key2="root", return_path=False, special_data=None, type_filter=None):
-        if not special_data:
-            special_data = self.folder_of
-        yield from super().get_iterable(key1, key2, return_path, special_data, type_filter)
 
 
 if __name__ == '__main__':

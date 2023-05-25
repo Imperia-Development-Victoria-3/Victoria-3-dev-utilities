@@ -1,6 +1,10 @@
+import os
+from parse_encoder import parse_text_file
+
+
 class DataFormat:
 
-    def __init__(self, dictionary: dict = {}):
+    def __init__(self, dictionary: dict = None):
         self._dictionary = dictionary
         self.data = {}
 
@@ -45,3 +49,34 @@ class DataFormat:
 
     def __getitem__(self, key):
         return self.data[key]
+
+
+class DataFormatFolder(DataFormat):
+
+    def __init__(self, folder: str, folder_of: type = DataFormat):
+        super().__init__()
+        self.folder = folder
+        self.folder_of = folder_of
+        self.flattened_refs = {}
+
+    def interpret(self):
+        for dirpath, dirnames, filenames in os.walk(self.folder):
+            for filename in filenames:
+                if filename.endswith('.txt'):
+                    file_path = os.path.join(dirpath, filename)
+                    dictionary = parse_text_file(file_path)
+                    technology_file = self.folder_of(dictionary)
+                    self.data[filename] = technology_file
+
+    def construct_refs(self):
+        for file in self.data.values():
+            for real_key, value in file.data.items():
+                self.flattened_refs[real_key] = value
+
+    def get_iterable(self, key1="root", key2="root", return_path=False, special_data=None, type_filter=None):
+        if not special_data:
+            special_data = self.folder_of
+        yield from super().get_iterable(key1, key2, return_path, special_data, type_filter)
+
+    def __getitem__(self, key):
+        return self.flattened_refs[key]

@@ -16,7 +16,7 @@ layout = html.Div([
     dcc.Dropdown(
         id='building-dropdown',
         options=[{'label': i, 'value': i} for i in building_list],
-        value='Building 1'
+        value=''
     ),
     html.Div(id='method-dropdowns', className='dropdown-container')
     # html.Img(id='building-image', src=''),
@@ -30,6 +30,10 @@ layout = html.Div([
     Output('method-dropdowns', 'children'),
     Input('building-dropdown', 'value'))
 def update_method_dropdowns(selected_building):
+    print(selected_building)
+    if not selected_building:
+        return []
+
     building = list(GlobalState.buildings_folder.get_iterable(selected_building))
     GlobalState.currently_selected_building = building[0]  # the first item found
 
@@ -65,14 +69,15 @@ def update_info_div(selected_value):
     inputs = {}
     outputs = {}
     employees = {}
-    for modifier, values in production_method["building_modifiers"].items():
-        if modifier == "workforce_scaled":
-            inputs = {key.split("_add")[0]: value for key, value in values.items() if key.startswith("building_input")}
-            outputs = {key.split("_add")[0]: value for key, value in values.items() if
-                       key.startswith("building_output")}
-        elif modifier == "level_scaled":
-            employees = {key.split("_add")[0]: value for key, value in values.items() if
-                         key.startswith("building_employment")}
+    if production_method.get("building_modifiers"):
+        for modifier, values in production_method["building_modifiers"].items():
+            if modifier == "workforce_scaled":
+                inputs = {key.split("_add")[0]: value for key, value in values.items() if key.startswith("building_input")}
+                outputs = {key.split("_add")[0]: value for key, value in values.items() if
+                           key.startswith("building_output")}
+            elif modifier == "level_scaled":
+                employees = {key.split("_add")[0]: value for key, value in values.items() if
+                             key.startswith("building_employment")}
 
     return html.Div([
         html.P('Inputs:'),
