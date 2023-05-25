@@ -9,8 +9,7 @@ import json
 
 from app import app
 
-building_list = [path[-1] for category, path in
-                 GlobalState.buildings_folder.get_iterable("production_method_groups", return_path=True)]
+building_list = list(GlobalState.buildings_folder.flattened_refs.keys())
 
 layout = html.Div([
     dcc.Dropdown(
@@ -34,9 +33,7 @@ def update_method_dropdowns(selected_building):
     if not selected_building:
         return []
 
-    building = list(GlobalState.buildings_folder.get_iterable(selected_building))
-    GlobalState.currently_selected_building = building[0]  # the first item found
-
+    GlobalState.currently_selected_building = GlobalState.buildings_folder[selected_building]
     prod_methods = GlobalState.currently_selected_building["production_method_groups"]
     dropdowns = []
     for name, group in prod_methods.items():
@@ -72,7 +69,8 @@ def update_info_div(selected_value):
     if production_method.get("building_modifiers"):
         for modifier, values in production_method["building_modifiers"].items():
             if modifier == "workforce_scaled":
-                inputs = {key.split("_add")[0]: value for key, value in values.items() if key.startswith("building_input")}
+                inputs = {key.split("_add")[0]: value for key, value in values.items() if
+                          key.startswith("building_input")}
                 outputs = {key.split("_add")[0]: value for key, value in values.items() if
                            key.startswith("building_output")}
             elif modifier == "level_scaled":
