@@ -16,13 +16,10 @@ class ProductionMethodGroups(DataFormat):
             for key, value in self.data.items():
                 if value.get("production_methods"):
                     production_methods = value["production_methods"]
-                    new_dictionary = {}
                     for production_method in production_methods:
                         production_method_object = list(
                             self.production_methods_folder.get_iterable(production_method, type_filter=dict))
-                        new_dictionary[production_method] = production_method_object[0]
-                    value["production_methods"] = new_dictionary
-
+                        production_methods[production_method] = production_method_object[0]
 
 class ProductionMethodGroupsFolder(DataFormat):
 

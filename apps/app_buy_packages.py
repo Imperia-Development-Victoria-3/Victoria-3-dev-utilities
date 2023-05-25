@@ -1,14 +1,11 @@
 from dash import dcc, html, Input, Output, Patch, dash_table, State
 
-
 from data_utils import TransformNoInverse
 from data_utils.transformation_types import Percentage, PriceCompensation
 from dash.exceptions import PreventUpdate
 from constants import GlobalState
 
 from app import app
-
-
 
 layout = html.Div([
     html.Div(id="hidden-output", style={"display": "none"}),

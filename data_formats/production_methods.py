@@ -15,12 +15,10 @@ class ProductionMethods(DataFormat):
             for key, value in self.data.items():
                 if value.get("unlocking_technologies"):
                     unlocking_technologies = value["unlocking_technologies"]
-                    new_dictionary = {}
                     for technology in unlocking_technologies:
                         technology_object = list(
                             self.technologies_folder.get_iterable(technology, type_filter=dict))
-                        new_dictionary[technology] = technology_object[0]
-                    value["unlocking_technologies"] = new_dictionary
+                        unlocking_technologies[technology] = technology_object[0]
 
 
 class ProductionMethodsFolder(DataFormat):

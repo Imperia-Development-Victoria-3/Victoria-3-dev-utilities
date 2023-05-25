@@ -19,7 +19,7 @@ class Buildings(DataFormat):
                 building["building_group"] = {name: self._building_groups[building["building_group"]]}
             if self._production_method_groups:
                 for production_method_group in building["production_method_groups"]:
-                    building[production_method_group] = \
+                    building["production_method_groups"][production_method_group] = \
                     list(self._production_method_groups.get_iterable(production_method_group, type_filter=dict))[0]
 
 
