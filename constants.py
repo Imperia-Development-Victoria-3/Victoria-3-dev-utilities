@@ -23,6 +23,7 @@ class GlobalState:
     goods = None
     pop_needs = None
     buildings_folder = None
+    currently_selected_building = None
 
     @staticmethod
     def reset():
@@ -52,7 +53,8 @@ class GlobalState:
             Constants.DEFAULT_GAME_PATH + os.path.normpath("/common/production_method_groups"),
             production_method_folder)
 
-        dictionary = parse_text_file(Constants.DEFAULT_GAME_PATH + os.path.normpath("/common/building_groups/00_building_groups.txt"))
+        dictionary = parse_text_file(
+            Constants.DEFAULT_GAME_PATH + os.path.normpath("/common/building_groups/00_building_groups.txt"))
         buildings_groups = BuildingGroups(dictionary)
         GlobalState.buildings_folder = BuildingsFolder(
             Constants.DEFAULT_GAME_PATH + os.path.normpath("/common/buildings"),
