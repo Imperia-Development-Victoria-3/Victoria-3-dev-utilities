@@ -1,6 +1,7 @@
 dash
 dash-core-components
 dash-html-components
+dash-bootstrap-components
 dash-table
 plotly
 numpy
