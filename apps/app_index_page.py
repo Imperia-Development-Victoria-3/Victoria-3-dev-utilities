@@ -2,7 +2,7 @@ from multiprocessing import Queue, Process
 from dash import dcc, html, Input, Output
 from dash.exceptions import PreventUpdate
 from tkinter import filedialog, Tk
-from constants import Constants, GlobalState
+from constants import GlobalState, Constants
 import os
 
 from app import app
@@ -28,7 +28,8 @@ def select_folder(q):
 
 
 @app.callback(Output('output-container-button', 'children'),
-              Input('select-folder', 'n_clicks'))
+              Input('select-folder', 'n_clicks'),
+              prevent_initial_call=True)
 def select_folder_path(n_clicks):
     if n_clicks < 1:
         raise PreventUpdate

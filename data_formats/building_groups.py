@@ -1,5 +1,4 @@
 import copy
-import json
 from data_formats import DataFormat
 
 
@@ -52,8 +51,7 @@ class BuildingGroups(DataFormat):
         dictionary[name] = new_building_group
 
     def interpret(self):
-        self.data = DataFormat.copy_dict_with_string_keys(self._dictionary)
-
+        super().interpret()
         for name, building_group in self.data.items():
             self.overwrite_values(name, building_group, self.data)
 

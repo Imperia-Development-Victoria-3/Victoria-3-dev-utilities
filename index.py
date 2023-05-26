@@ -2,7 +2,7 @@ from constants import GlobalState
 
 GlobalState.reset()
 
-from dash import dcc, html, Input, Output, dash
+from dash import dcc, html, Input, Output
 from apps import app_buy_packages, app_building_designer, app_index_page
 
 from app import app
@@ -25,5 +25,4 @@ def display_page(pathname):
 
 
 if __name__ == '__main__':
-    GlobalState.reset()
     app.run_server(debug=True)

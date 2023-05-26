@@ -24,13 +24,21 @@ class GlobalState:
     pop_needs = None
     buildings_folder = None
     currently_selected_building = None
+    currently_selected_game_folder = None
 
     @staticmethod
-    def reset():
+    def reset(force=False):
         from data_formats import Goods, PopNeeds, DashBuyPackages, BuildingGroups, BuildingsFolder, TechnologiesFolder, \
             ProductionMethodsFolder, ProductionMethodGroupsFolder
         from parse_encoder import parse_text_file
         from data_utils.transformation_types import Percentage
+
+        # execute when folder has changed.
+        if GlobalState.currently_selected_game_folder != Constants.DEFAULT_GAME_PATH or force:
+            print(GlobalState.currently_selected_game_folder, Constants.DEFAULT_GAME_PATH)
+            GlobalState.currently_selected_game_folder = Constants.DEFAULT_GAME_PATH
+        else:
+            return
 
         dictionary = parse_text_file(
             Constants.DEFAULT_GAME_PATH + os.path.normpath("\\common\\buy_packages\\00_buy_packages.txt"))

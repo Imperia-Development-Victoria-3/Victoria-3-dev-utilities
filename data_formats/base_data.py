@@ -37,7 +37,7 @@ class DataFormat:
                     for item in value:
                         if isinstance(item, dict):
                             yield from search_dict(item, new_path, seen)
-                        if isinstance(value, special_data):
+                        if special_data and isinstance(value, special_data):
                             yield from search_dict(value.data, new_path, seen)
                 elif special_data and isinstance(value, special_data):
                     yield from search_dict(value.data, new_path, seen)

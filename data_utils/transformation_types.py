@@ -3,10 +3,8 @@ from data_utils.transformation import Transform
 
 class PriceCompensation(Transform):
     order = 1
-    from data_formats import Goods
-    from data_formats import PopNeeds
 
-    def __init__(self, goods: Goods, needs: PopNeeds, is_forward: bool = True):
+    def __init__(self, goods: "Goods", needs: "PopNeeds", is_forward: bool = True):
         super().__init__(is_forward)
         self.goods = goods
         self.needs = needs
@@ -43,7 +41,7 @@ class PriceCompensation(Transform):
 class Percentage(Transform):
     order = 0
 
-    def __init__(self, query, is_forward: bool = True):
+    def __init__(self, query: str, is_forward: bool = True):
         super().__init__(is_forward)
         self.query = query
 

@@ -5,7 +5,6 @@ from parse_decoder import decode_dictionary
 import pandas as pd
 import plotly.express as px
 import copy
-from data_utils import Transform
 
 
 class BuyPackages:
@@ -80,7 +79,7 @@ class BuyPackages:
         for transform in sorted(self._transforms, key=lambda t: t.order, reverse=True):
             transform.apply(self.df)
 
-    def apply_transformation(self, transformation: Transform, forward=True):
+    def apply_transformation(self, transformation: "Transform", forward=True):
         transformation.is_forward = forward
         if self._transforms.get(transformation):
             transformation = self._transforms[transformation]
@@ -91,7 +90,7 @@ class BuyPackages:
         else:
             self.add_transformation(transformation)
 
-    def remove_transformation(self, transformation: Transform):
+    def remove_transformation(self, transformation: "Transform"):
         if not self._transforms.get(transformation):
             raise Exception("Transformation doesn't exist")
 
@@ -107,7 +106,7 @@ class BuyPackages:
             if transform.order < transformation.order:
                 transform.apply(self.df)
 
-    def add_transformation(self, transformation: Transform):
+    def add_transformation(self, transformation: "Transform"):
         if self._transforms.get(transformation):
             raise Exception("Transformation already exists")
 
