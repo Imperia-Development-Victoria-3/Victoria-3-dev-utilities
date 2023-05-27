@@ -1,11 +1,10 @@
 from dash import dcc, html, Input, Output, Patch, dash_table, State
 from dash.dependencies import Input, Output, MATCH, ALL
 from dash import callback_context
-from data_utils import TransformNoInverse
-from data_utils.transformation_types import Percentage, PriceCompensation
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from constants import GlobalState
+from data_formats import ProductionMethod
 import json
 
 from app import app
@@ -24,7 +23,6 @@ layout = html.Div([
     # html.Img(id='building-image', src=''),
     # html.Div(id='profit-score'),
     # html.Div(id='other-scores'),
-    # html.Div(id='production-methods'),
 ])
 
 
@@ -40,7 +38,7 @@ def update_method_dropdowns(selected_building):
     dropdowns = []
     for name, group in prod_methods.items():
         production_methods = [method for method in group["production_methods"].keys()]
-        inputs, outputs, employees = get_attributes(list(group["production_methods"].values())[0])
+        production_method = ProductionMethod(production_methods[0], list(group["production_methods"].values())[0], GlobalState.goods)
         dropdown = html.Div([
             dcc.Dropdown(
                 id={'type': 'dropdown', 'index': name},
@@ -49,7 +47,7 @@ def update_method_dropdowns(selected_building):
                 style={"width": "100%"}
             ),
             html.Div(id={'type': 'info', 'index': name},
-                     children=generate_info_box(production_methods[0], inputs, outputs, employees))],
+                     children=production_method.generate_info_box())],
             className='dropdown'
         )
         dropdowns.append(dropdown)
@@ -67,76 +65,47 @@ def update_info_div(selected_value):
 
     production_method = GlobalState.currently_selected_building["production_method_groups"][production_method_group][
         "production_methods"][selected_value]
-    inputs, outputs, employees = get_attributes(production_method)
-
-    return generate_info_box(selected_value, inputs, outputs, employees)
-
-
-def get_attributes(production_method):
-    inputs = {}
-    outputs = {}
-    employees = {}
-    if production_method.get("building_modifiers"):
-        for modifier, values in production_method["building_modifiers"].items():
-            if modifier == "workforce_scaled":
-                inputs = {key.split("_add")[0]: value for key, value in values.items() if
-                          key.startswith("building_input")}
-                outputs = {key.split("_add")[0]: value for key, value in values.items() if
-                           key.startswith("building_output")}
-            elif modifier == "level_scaled":
-                employees = {key.split("_add")[0]: value for key, value in values.items() if
-                             key.startswith("building_employment")}
-    return inputs, outputs, employees
-
-
-def generate_info_box(name, inputs, outputs, employees):
-    return html.Div([
-        html.P('Inputs:'),
-        html.Ul([html.Li([
-            html.Span(f'{key}: '),  # Show the name of the input
-            dcc.Input(id={'type': 'input-value', 'index': key}, value=value, type='text')
-        ]) for key, value in inputs.items()]),
-        html.P('Outputs:'),
-        html.Ul([html.Li([
-            html.Span(f'{key}: '),  # Show the name of the output
-            dcc.Input(id={'type': 'output-value', 'index': key}, value=value, type='text')
-        ]) for key, value in outputs.items()]),
-        html.P('Employees:'),
-        html.Ul([html.Li([
-            html.Span(f'{key}: '),  # Show the name of the employee
-            dcc.Input(id={'type': 'employee-value', 'index': key}, value=value, type='text')
-        ]) for key, value in employees.items()]),
-        html.Button('Save Changes', id={'type': 'save', 'index': name}),
-        html.Div(id='output-div')
-    ])
+    production_method = ProductionMethod(selected_value, production_method)
+    print(production_method.generate_info_box())
+    return production_method.generate_info_box()
 
 
 @app.callback(
     Output('summary', 'children'),
-    [Input({'type': 'input-value', 'index': ALL}, 'value'),
-     Input({'type': 'output-value', 'index': ALL}, 'value'),
-     Input({'type': 'employee-value', 'index': ALL}, 'value'),
-     State({'type': 'input-value', 'index': ALL}, 'id'),
-     State({'type': 'output-value', 'index': ALL}, 'id'),
-     State({'type': 'employee-value', 'index': ALL}, 'id')],
+    [Input({'type': 'input-value-add', 'index': ALL}, 'value'),
+     Input({'type': 'input-value-mul', 'index': ALL}, 'value'),
+     Input({'type': 'output-value-add', 'index': ALL}, 'value'),
+     Input({'type': 'output-value-mul', 'index': ALL}, 'value'),
+     Input({'type': 'employee-value-add', 'index': ALL}, 'value'),
+     Input({'type': 'employee-value-mul', 'index': ALL}, 'value'),
+     State({'type': 'input-value-add', 'index': ALL}, 'id'),
+     State({'type': 'input-value-mul', 'index': ALL}, 'id'),
+     State({'type': 'output-value-add', 'index': ALL}, 'id'),
+     State({'type': 'output-value-mul', 'index': ALL}, 'id'),
+     State({'type': 'employee-value-add', 'index': ALL}, 'id'),
+     State({'type': 'employee-value-mul', 'index': ALL}, 'id')],
     prevent_initial_call=True)
-def update_summary(input_values, output_values, employee_values, input_ids, output_ids, employee_ids):
-    def accumulate(values, ids):
+def update_summary(input_values_add, input_values_mul, output_values_add, output_values_mul, employee_values_add,
+                   employee_values_mul,
+                   input_ids_add, input_ids_mul, output_ids_add, output_ids_mul, employee_ids_add, employee_ids_mul):
+    def accumulate(values_add, values_mul, ids_add, ids_mul):
         # Initialize dictionary to hold sum of values for each unique key
         sums = {}
         # Iterate over values and ids together
-        for value, id in zip(values, ids):
-            # Get key from the id dictionary
-            key = id['index']
-            # Convert value to float and add to the sum for this key
-            try:
-                sums[key] = sums.get(key, 0) + float(value)
-            except ValueError:
-                "do Nothing"
+        for values, ids in [(values_add, ids_add), (values_mul, ids_mul)]:
+            for value, id in zip(values, ids):
+                # Get key from the id dictionary and remove '-add' or '-mul'
+                key = id['index'].rsplit('-', 1)[0]
+                # Convert value to float and add to the sum for this key
+                try:
+                    sums[key] = sums.get(key, 0) + float(value)
+                except ValueError:
+                    pass
         return sums
 
-    input_sums, output_sums, employee_sums = map(accumulate, [input_values, output_values, employee_values],
-                                                 [input_ids, output_ids, employee_ids])
+    input_sums = accumulate(input_values_add, input_values_mul, input_ids_add, input_ids_mul)
+    output_sums = accumulate(output_values_add, output_values_mul, output_ids_add, output_ids_mul)
+    employee_sums = accumulate(employee_values_add, employee_values_mul, employee_ids_add, employee_ids_mul)
 
     # Create rows for inputs, outputs, and employees
     input_rows = [html.Div(f'{key}: {val}', className='three columns') for key, val in input_sums.items()]
@@ -163,3 +132,4 @@ def update_summary(input_values, output_values, employee_values, input_ids, outp
     rows.append(total_row)
 
     return rows
+

@@ -4,8 +4,10 @@ import os
 
 
 class ProductionMethodGroups(DataFormat):
+    prefixes = ["building_"]
+
     def __init__(self, dictionary: dict, production_methods_folder: "ProductionMethodsFolder" = None):
-        super().__init__(dictionary)
+        super().__init__(dictionary, ProductionMethodGroups.prefixes)
         self._production_methods_folder = production_methods_folder
         self.interpret()
 

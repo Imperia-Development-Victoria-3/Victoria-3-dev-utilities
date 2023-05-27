@@ -19,5 +19,4 @@ if __name__ == '__main__':
     dictionary = parse_text_file(Constants.DEFAULT_GAME_PATH + os.path.normpath("\\common\\goods\\00_goods.txt"))
     goods = Goods(dictionary)
     print(list(goods.get_iterable("category", return_path=True)))
-    # print(dictionary)
     print(decode_dictionary(dictionary))

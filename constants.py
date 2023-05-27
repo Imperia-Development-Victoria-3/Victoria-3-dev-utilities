@@ -31,7 +31,7 @@ class GlobalState:
         from data_formats import Goods, PopNeeds, DashBuyPackages, BuildingGroups, BuildingsFolder, TechnologiesFolder, \
             ProductionMethodsFolder, ProductionMethodGroupsFolder
         from parse_encoder import parse_text_file
-        from data_utils.transformation_types import Percentage
+        from data_utils import Percentage
 
         # execute when folder has changed.
         if GlobalState.currently_selected_game_folder != Constants.DEFAULT_GAME_PATH or force:

@@ -5,5 +5,5 @@ from .pop_needs import PopNeeds
 from .building_groups import BuildingGroups
 from .buildings import Buildings, BuildingsFolder
 from .technologies import Technologies, TechnologiesFolder
-from .production_methods import ProductionMethods, ProductionMethodsFolder
+from .production_methods import ProductionMethod, ProductionMethods, ProductionMethodsFolder
 from .production_method_groups import ProductionMethodGroups, ProductionMethodGroupsFolder

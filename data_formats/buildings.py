@@ -1,13 +1,15 @@
 import os
 from constants import Constants
 from parse_encoder import parse_text_file
-from data_formats import DataFormat, DataFormatFolder
+from data_formats import DataFormat, DataFormatFolder, production_methods
 
 
 class Buildings(DataFormat):
+    prefixes = ["building_"]
+
     def __init__(self, dictionary: dict, building_groups: "BuildingGroups" = None,
                  production_method_groups: "ProductionMethodGroupsFolder" = None):
-        super().__init__(dictionary)
+        super().__init__(dictionary, Buildings.prefixes)
         self._building_groups = building_groups
         self._production_method_groups = production_method_groups
         self.interpret()
@@ -16,7 +18,7 @@ class Buildings(DataFormat):
         super().interpret()
         for name, building in self.data.items():
             if self._building_groups:
-                building["building_group"] = {name: self._building_groups[building["building_group"]]}
+                building["group"] = {name: self._building_groups[building["group"]]}
             if self._production_method_groups:
                 for production_method_group in building["production_method_groups"]:
                     building["production_method_groups"][production_method_group] = self._production_method_groups[

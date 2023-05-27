@@ -2,18 +2,12 @@ from data_formats import DataFormat
 
 
 class PopNeeds(DataFormat):
+    prefixes = ["popneed_"]
 
     def __init__(self, dictionary):
-        super().__init__(dictionary)
+        super().__init__(dictionary, PopNeeds.prefixes)
         self.interpret()
         self._transforms = {}
-
-    def interpret(self):
-        super().interpret()
-        for name, need_group in list(self.data.items()):
-            # just getting rid of the popneed qualifier as it is uninformative
-            self.data["_".join(name.split("_")[1:])] = need_group
-            del self.data[name]
 
 
 if __name__ == '__main__':

@@ -4,16 +4,23 @@ from parse_encoder import parse_text_file
 
 class DataFormat:
 
-    def __init__(self, dictionary: dict = None):
+    def __init__(self, dictionary: dict = None, prefixes: list = None):
         self._dictionary = dictionary
         self.data = {}
+        self._prefix_manager = None
+        if prefixes:
+            self._prefix_manager = PrefixManager(prefixes)
 
     @staticmethod
-    def copy_dict_with_string_keys(item):
+    def copy_dict_with_string_keys(item, prefix_manager: "PrefixManager" = None):
         if isinstance(item, dict):
-            return {k: DataFormat.copy_dict_with_string_keys(v) for k, v in item.items() if isinstance(k, str)}
+            return {
+                (prefix_manager.remove_prefix(k) if prefix_manager else k):
+                    DataFormat.copy_dict_with_string_keys(v, prefix_manager)
+                for k, v in item.items() if isinstance(k, str)
+            }
         elif isinstance(item, list):
-            return [DataFormat.copy_dict_with_string_keys(v) for v in item]
+            return [DataFormat.copy_dict_with_string_keys(i, prefix_manager) for i in item]
         else:
             return item
 
@@ -45,7 +52,7 @@ class DataFormat:
         yield from search_dict({"root": self.data}, [], set())
 
     def interpret(self):
-        self.data = DataFormat.copy_dict_with_string_keys(self._dictionary)
+        self.data = DataFormat.copy_dict_with_string_keys(self._dictionary, self._prefix_manager)
 
     def __getitem__(self, key):
         return self.data[key]
@@ -80,3 +87,37 @@ class DataFormatFolder(DataFormat):
 
     def __getitem__(self, key):
         return self.flattened_refs[key]
+
+
+class PrefixManager:
+    def __init__(self, prefixes):
+        self._prefixes = {prefix: "" for prefix in prefixes}
+        self._memory = {}
+
+    def remove_prefix(self, key):
+        new_key = key
+        for prefix in self._prefixes:
+            if key.startswith(prefix):
+                new_key = key[len(prefix):]
+                self._memory[new_key] = key
+        return new_key
+
+    def remove_prefixes(self, data):
+        for prefix in self._prefixes:
+            keys_to_modify = [k for k in data if k.startswith(prefix)]
+            for key in keys_to_modify:
+                new_key = key[len(prefix):]
+                self._memory[new_key] = key
+                data[new_key] = data.pop(key)
+
+    def add_prefixes(self, data):
+        keys_to_modify = [k for k in data if k in self._memory]
+        for key in keys_to_modify:
+            original_key = self._memory[key]
+            data[original_key] = data.pop(key)
+
+    def add_prefix(self, key):
+        if self._memory.get(key):
+            return self._memory[key]
+        else:
+            return key
