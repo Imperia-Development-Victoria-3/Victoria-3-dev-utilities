@@ -88,7 +88,7 @@ def update_info_div(selected_value):
 def update_summary(input_values_add, input_values_mul, output_values_add, output_values_mul, employee_values_add,
                    employee_values_mul,
                    input_ids_add, input_ids_mul, output_ids_add, output_ids_mul, employee_ids_add, employee_ids_mul):
-    def accumulate(values_add, values_mul, ids_add, ids_mul):
+    def accumulate(values_add, values_mul, ids_add, ids_mul, is_goods=False):
         # Initialize dictionary to hold sum of values for each unique key
         sums = {}
         # Iterate over values and ids together
@@ -98,13 +98,14 @@ def update_summary(input_values_add, input_values_mul, output_values_add, output
                 key = id['index'].rsplit('-', 1)[0]
                 # Convert value to float and add to the sum for this key
                 try:
-                    sums[key] = sums.get(key, 0) + float(value)
+                    subtotal = float(GlobalState.goods[key]["cost"]) * float(value) if is_goods else float(value)
+                    sums[key] = sums.get(key, 0) + subtotal
                 except ValueError:
                     pass
         return sums
 
-    input_sums = accumulate(input_values_add, input_values_mul, input_ids_add, input_ids_mul)
-    output_sums = accumulate(output_values_add, output_values_mul, output_ids_add, output_ids_mul)
+    input_sums = accumulate(input_values_add, input_values_mul, input_ids_add, input_ids_mul, True)
+    output_sums = accumulate(output_values_add, output_values_mul, output_ids_add, output_ids_mul, True)
     employee_sums = accumulate(employee_values_add, employee_values_mul, employee_ids_add, employee_ids_mul)
 
     # Create rows for inputs, outputs, and employees
