@@ -1,13 +1,14 @@
 from data_formats import DataFormat, DataFormatFolder
 from parse_encoder import parse_text_file
 import os
+from typing import Union
 
 
 class ProductionMethodGroups(DataFormat):
     prefixes = ["building_"]
 
-    def __init__(self, dictionary: dict, production_methods_folder: "ProductionMethodsFolder" = None):
-        super().__init__(dictionary, ProductionMethodGroups.prefixes)
+    def __init__(self, data: Union[dict, str], production_methods_folder: "ProductionMethodsFolder" = None):
+        super().__init__(data, ProductionMethodGroups.prefixes)
         self._production_methods_folder = production_methods_folder
         self.interpret()
 
@@ -23,10 +24,11 @@ class ProductionMethodGroups(DataFormat):
 
 
 class ProductionMethodGroupsFolder(DataFormatFolder):
+    relative_file_location = os.path.normpath("common/production_method_groups")
 
-    def __init__(self, folder: str, production_methods_folder: "ProductionMethodsFolder" = None,
+    def __init__(self, data: str, production_methods_folder: "ProductionMethodsFolder" = None,
                  folder_of: type = ProductionMethodGroups):
-        super().__init__(folder, folder_of)
+        super().__init__(data, folder_of)
         self.production_methods_folder = production_methods_folder
         self.interpret()
         self.construct_refs()

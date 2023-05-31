@@ -3,27 +3,32 @@ from dash.dependencies import Input, Output, MATCH, ALL
 from dash import callback_context
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-from constants import GlobalState
-from data_formats import ProductionMethod
+from data_formats import TechnologiesFolder, ProductionMethodGroupsFolder, ProductionMethodsFolder, BuildingGroups, BuildingsFolder, GoodsFolder, PopNeedsFolder, ProductionMethod
 import json
 
-from app import app
+from app import app, cache
 
-building_list = list(GlobalState.buildings_folder.flattened_refs.keys())
 
-layout = html.Div([
-    dcc.Dropdown(
-        id='building-dropdown',
-        options=[{'label': i, 'value': i} for i in building_list],
-        value=''
-    ),
-    html.Div(id='method-dropdowns', className='dropdown-container'),
-    html.Div(id="summary")
+def get_layout():
+    building_list = list(cache.get(BuildingsFolder.__name__).flattened_refs.keys()) if cache.get(
+        BuildingsFolder.__name__) else []
+    return html.Div([
+        dcc.Dropdown(
+            id='building-dropdown',
+            options=[{'label': i, 'value': i} for i in building_list],
+            value=''
+        ),
+        html.Div(id='method-dropdowns', className='dropdown-container'),
+        html.Div(id="summary")
 
-    # html.Img(id='building-image', src=''),
-    # html.Div(id='profit-score'),
-    # html.Div(id='other-scores'),
-])
+        # html.Img(id='building-image', src=''),
+        # html.Div(id='profit-score'),
+        # html.Div(id='other-scores'),
+    ])
+
+
+requirements = [ProductionMethodGroupsFolder, ProductionMethodsFolder, BuildingGroups,
+                BuildingsFolder, GoodsFolder, TechnologiesFolder]
 
 
 @app.callback(
@@ -33,12 +38,13 @@ def update_method_dropdowns(selected_building):
     if not selected_building:
         return []
 
-    GlobalState.currently_selected_building = GlobalState.buildings_folder[selected_building]
-    prod_methods = GlobalState.currently_selected_building["production_method_groups"]
+    cache.set("currently_selected_building", cache.get(BuildingsFolder.__name__)[selected_building])
+    prod_methods = cache.get("currently_selected_building")["production_method_groups"]
     dropdowns = []
     for name, group in prod_methods.items():
         production_methods = [method for method in group["production_methods"].keys()]
-        production_method = ProductionMethod(production_methods[0], list(group["production_methods"].values())[0], GlobalState.goods)
+        production_method = ProductionMethod(production_methods[0], list(group["production_methods"].values())[0],
+                                             cache.get(GoodsFolder.__name__))
         dropdown = html.Div([
             dcc.Dropdown(
                 id={'type': 'dropdown', 'index': name},
@@ -63,10 +69,9 @@ def update_info_div(selected_value):
     production_method_group = callback_context.triggered[0]['prop_id'].split('.')[0]
     production_method_group = json.loads(production_method_group)['index']
 
-    production_method = GlobalState.currently_selected_building["production_method_groups"][production_method_group][
+    production_method = cache.get("currently_selected_building")["production_method_groups"][production_method_group][
         "production_methods"][selected_value]
     production_method = ProductionMethod(selected_value, production_method)
-    print(production_method.generate_info_box())
     return production_method.generate_info_box()
 
 
@@ -98,7 +103,8 @@ def update_summary(input_values_add, input_values_mul, output_values_add, output
                 key = id['index'].rsplit('-', 1)[0]
                 # Convert value to float and add to the sum for this key
                 try:
-                    subtotal = float(GlobalState.goods[key]["cost"]) * float(value) if is_goods else float(value)
+                    subtotal = float(cache.get(GoodsFolder.__name__)[key]["cost"]) * float(
+                        value) if is_goods else float(value)
                     sums[key] = sums.get(key, 0) + subtotal
                 except ValueError:
                     pass
@@ -133,4 +139,3 @@ def update_summary(input_values_add, input_values_mul, output_values_add, output
     rows.append(total_row)
 
     return rows
-

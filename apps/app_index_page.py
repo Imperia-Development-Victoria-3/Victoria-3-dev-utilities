@@ -2,22 +2,22 @@ from multiprocessing import Queue, Process
 from dash import dcc, html, Input, Output
 from dash.exceptions import PreventUpdate
 from tkinter import filedialog, Tk
-from constants import GlobalState, Constants
 import os
 
-from app import app
+from app import app, cache
 
-layout = html.Div([
-    html.H1('Welcome to the babylon dev tools'),
-    html.H2('Please choose the application you want to go to:'),
-    html.Div([
-        dcc.Link('Go to Buy Package app', href='/apps/app_buy_packages.py'),
-        html.Br(),
-        dcc.Link('Go to Building Designer app', href='/apps/app_building_designer.py'),
-    ]),
-    html.Button('Select Game Folder', id='select-folder', n_clicks=0),
-    html.Div(id='output-container-button', children=Constants.DEFAULT_GAME_PATH),
-])
+def get_layout():
+    return  html.Div([
+        html.H1('Welcome to the babylon dev tools'),
+        html.H2('Please choose the application you want to go to:'),
+        html.Div([
+            dcc.Link('Go to Buy Package app', href='/apps/app_buy_packages.py'),
+            html.Br(),
+            dcc.Link('Go to Building Designer app', href='/apps/app_building_designer.py'),
+        ]),
+        html.Button('Select Game Folder', id='select-folder', n_clicks=0),
+        html.Div(id='output-container-button', children=cache.get("game_directory")),
+    ])
 
 
 def select_folder(q):
@@ -40,8 +40,9 @@ def select_folder_path(n_clicks):
     path = q.get()
     if path:
         path = os.path.normpath(path)
-        Constants.DEFAULT_GAME_PATH = path
-        GlobalState.reset()
+        if path != cache.get("game_directory"):
+            cache.clear()
+            cache.set("game_directory", path)
         return f'Selected folder: {path}'
     else:
-        return f'Selected folder: {Constants.DEFAULT_GAME_PATH}'
+        return f'Selected folder: {cache.get("game_directory")}'

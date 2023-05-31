@@ -1,6 +1,7 @@
 import os
 import operator
 from collections import defaultdict
+from typing import Union
 
 from data_formats import DataFormat, DataFormatFolder
 from parse_encoder import parse_text_file
@@ -88,8 +89,8 @@ class ProductionMethod:
 class ProductionMethods(DataFormat):
     prefixes = ["building_"]
 
-    def __init__(self, dictionary: dict, technologies_folder: "TechnologiesFolder" = None):
-        super().__init__(dictionary, ProductionMethods.prefixes)
+    def __init__(self, data: Union[dict, str], technologies_folder: "TechnologiesFolder" = None):
+        super().__init__(data, ProductionMethods.prefixes)
         self._technologies_folder = technologies_folder
         self.interpret()
 
@@ -104,10 +105,11 @@ class ProductionMethods(DataFormat):
 
 
 class ProductionMethodsFolder(DataFormatFolder):
+    relative_file_location = os.path.normpath("common/production_methods")
 
-    def __init__(self, folder: str, technologies_folder: "TechnologiesFolder" = None,
+    def __init__(self, data: str, technologies_folder: "TechnologiesFolder" = None,
                  folder_of: type = ProductionMethods):
-        super().__init__(folder, folder_of)
+        super().__init__(data, folder_of)
         self.technologies_folder = technologies_folder
         self.interpret()
         self.construct_refs()

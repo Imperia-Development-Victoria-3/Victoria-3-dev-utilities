@@ -1,12 +1,23 @@
-from data_formats import DataFormat
+from data_formats import DataFormat, DataFormatFolder
+import os
+from typing import Union
 
 
 class Goods(DataFormat):
 
-    def __init__(self, dictionary):
-        super().__init__(dictionary)
+    def __init__(self, data: Union[dict, str]):
+        super().__init__(data)
         self.interpret()
         self._transforms = {}
+
+
+class GoodsFolder(DataFormatFolder):
+    relative_file_location = os.path.normpath("common/goods")
+
+    def __init__(self, data: str, folder_of: type = Goods):
+        super().__init__(data, folder_of)
+        self.interpret()
+        self.construct_refs()
 
 
 if __name__ == '__main__':

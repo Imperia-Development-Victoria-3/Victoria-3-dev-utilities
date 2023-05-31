@@ -1,11 +1,21 @@
 import os
 from parse_encoder import parse_text_file
+from typing import Union
 
 
 class DataFormat:
+    relative_file_location = ""
 
-    def __init__(self, dictionary: dict = None, prefixes: list = None):
-        self._dictionary = dictionary
+    def __init__(self, data: Union[dict, str] = None, prefixes: list = None):
+        if isinstance(data, dict):
+            self._dictionary = data
+        elif isinstance(data, str):
+            self._dictionary = parse_text_file(data)  # replace with your function to load data from a file
+        elif isinstance(data, type(None)):
+            self._dictionary = {}
+        else:
+            raise TypeError('data must be a dictionary or a string')
+
         self.data = {}
         self._prefix_manager = None
         if prefixes:
@@ -21,6 +31,20 @@ class DataFormat:
             }
         elif isinstance(item, list):
             return [DataFormat.copy_dict_with_string_keys(i, prefix_manager) for i in item]
+        else:
+            return item
+
+    def update_dict_with_string_keys(self, item, prefix_manager: "PrefixManager" = None):
+        if isinstance(item, dict):
+            updated_dict = {
+                (prefix_manager.add_prefix(k) if prefix_manager else k):
+                    self.update_dict_with_string_keys(v, prefix_manager)
+                for k, v in item.items()
+            }
+            self._dictionary.update(updated_dict)
+            return self._dictionary
+        elif isinstance(item, list):
+            return [self.update_dict_with_string_keys(i, prefix_manager) for i in item]
         else:
             return item
 

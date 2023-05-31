@@ -2,14 +2,15 @@ import os
 from constants import Constants
 from parse_encoder import parse_text_file
 from data_formats import DataFormat, DataFormatFolder, production_methods
+from typing import Union
 
 
 class Buildings(DataFormat):
     prefixes = ["building_"]
 
-    def __init__(self, dictionary: dict, building_groups: "BuildingGroups" = None,
+    def __init__(self,  data: Union[dict, str], building_groups: "BuildingGroups" = None,
                  production_method_groups: "ProductionMethodGroupsFolder" = None):
-        super().__init__(dictionary, Buildings.prefixes)
+        super().__init__(data, Buildings.prefixes)
         self._building_groups = building_groups
         self._production_method_groups = production_method_groups
         self.interpret()
@@ -26,10 +27,11 @@ class Buildings(DataFormat):
 
 
 class BuildingsFolder(DataFormatFolder):
+    relative_file_location = os.path.normpath("common/buildings")
 
-    def __init__(self, folder: str, building_groups: "BuildingGroups" = None,
+    def __init__(self, data: str, building_groups: "BuildingGroups" = None,
                  production_method_groups: "ProductionMethodGroupsFolder" = None, folder_of: type = Buildings):
-        super().__init__(folder, folder_of)
+        super().__init__(data, folder_of)
         self._building_groups = building_groups
         self._production_method_groups = production_method_groups
         self.interpret()
@@ -40,8 +42,7 @@ class BuildingsFolder(DataFormatFolder):
             for filename in filenames:
                 if filename.endswith('.txt'):
                     file_path = os.path.join(dirpath, filename)
-                    dictionary = parse_text_file(file_path)
-                    building_file = Buildings(dictionary, self._building_groups, self._production_method_groups)
+                    building_file = Buildings(file_path, self._building_groups, self._production_method_groups)
                     self.data[filename] = building_file
 
 

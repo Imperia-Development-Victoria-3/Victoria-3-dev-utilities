@@ -1,8 +1,12 @@
 import copy
 from data_formats import DataFormat
+import os
+from typing import Union
 
 
 class BuildingGroups(DataFormat):
+    relative_file_location = os.path.normpath("common/building_groups/00_building_groups.txt")
+
     default_values = {
         "parent_group": "None",
         "always_possible": "no",
@@ -28,8 +32,8 @@ class BuildingGroups(DataFormat):
         "hires_unemployed_only": "no"
     }
 
-    def __init__(self, dictionary):
-        super().__init__(dictionary)
+    def __init__(self, data: Union[dict, str]):
+        super().__init__(data)
         self.interpret()
         self.keys = list(BuildingGroups.default_values.keys())
 

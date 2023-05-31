@@ -2,37 +2,46 @@ from dash import dcc, html, Input, Output, Patch, dash_table, State
 
 from data_utils import TransformNoInverse, Percentage, PriceCompensation
 from dash.exceptions import PreventUpdate
-from constants import GlobalState
+from data_formats import DashBuyPackages, GoodsFolder, PopNeedsFolder
 
-from app import app
+from app import app, cache
 
-layout = html.Div([
-    html.Div(id="hidden-output", style={"display": "none"}),
-    dcc.Store(id='table-selected-prev'),
-    html.Button('Save copy', id='save-button', n_clicks=0),
-    html.Button('Normalize', id='normalize-button', n_clicks=0),
-    dcc.Checklist(
-        options={
-            'price': 'Apply Price Adjustment',
-        },
-        value=[],
-        id="transform options"
-    ),
-    dcc.RadioItems(['Percentage', 'Absolute'], 'Percentage', id='table-number-type'),
-    html.Br(),
-    dash_table.DataTable(
-        id='editable-table',
-        columns=GlobalState.buy_packages.get_table_formatting(),
-        data=GlobalState.buy_packages.df.to_dict("records"),
-        editable=True,
-        style_table={'height': '200px', 'overflowY': 'auto'}
-    ),
-    html.Br(),
-    dcc.Graph(
-        figure=GlobalState.buy_packages.get_ploty_plot("goods.", "area"),
-        id='buy-packages-plot',
-        style={'height': '700px'})
-])
+
+def get_layout():
+    return html.Div([
+        html.Div(id="hidden-output", style={"display": "none"}),
+        dcc.Store(id='table-selected-prev'),
+        html.Button('Save copy', id='save-button', n_clicks=0),
+        html.Button('Normalize', id='normalize-button', n_clicks=0),
+        dcc.Checklist(
+            options={
+                'price': 'Apply Price Adjustment',
+            },
+            value=[],
+            id="transform options"
+        ),
+        dcc.RadioItems(['Percentage', 'Absolute'], 'Absolute', id='table-number-type'),
+        html.Br(),
+        dash_table.DataTable(
+            id='editable-table',
+            columns=cache.get(DashBuyPackages.__name__).get_table_formatting() if cache.get(
+                DashBuyPackages.__name__) is not None else [],
+            data=cache.get(DashBuyPackages.__name__).data_frame.to_dict("records") if cache.get(
+                DashBuyPackages.__name__) is not None else [],
+            editable=True,
+            style_table={'height': '200px', 'overflowY': 'auto'}
+        ),
+        html.Br(),
+        dcc.Graph(
+            figure=cache.get(DashBuyPackages.__name__).get_ploty_plot("goods.",
+                                                                      "area") if cache.get(
+                DashBuyPackages.__name__) is not None else [],
+            id='buy-packages-plot',
+            style={'height': '700px'})
+    ])
+
+
+requirements = [DashBuyPackages, GoodsFolder, PopNeedsFolder]
 
 
 @app.callback(
@@ -50,12 +59,14 @@ def store_previous_data(previous_data):
     prevent_initial_call=True
 )
 def update_transformations(transforms):
-    transformation = PriceCompensation(GlobalState.goods, GlobalState.pop_needs)
+    transformation = PriceCompensation(cache.get(GoodsFolder.__name__), cache.get(PopNeedsFolder.__name__))
     if 'price' in transforms:
-        GlobalState.buy_packages.apply_transformation(transformation)
+        cache.get(DashBuyPackages.__name__).apply_transformation(transformation)
     else:
-        GlobalState.buy_packages.apply_transformation(transformation, forward=False)
-    return GlobalState.buy_packages.df.to_dict("records"), GlobalState.buy_packages.get_ploty_plot("goods.", "area")
+        cache.get(DashBuyPackages.__name__).apply_transformation(transformation, forward=False)
+    return cache.get(DashBuyPackages.__name__).data_frame.to_dict("records"), cache.get(
+        DashBuyPackages.__name__).get_ploty_plot("goods.",
+                                                 "area")
 
 
 @app.callback(
@@ -64,7 +75,7 @@ def update_transformations(transforms):
     prevent_initial_call=True)
 def update_output(n_clicks):
     if n_clicks > 0:
-        GlobalState.buy_packages.export_paradox("00_buy_packages_copy.txt")
+        cache.get(DashBuyPackages.__name__).export_paradox("00_buy_packages_copy.txt")
     raise PreventUpdate
 
 
@@ -75,8 +86,8 @@ def update_output(n_clicks):
 )
 def update_output(n_clicks):
     if n_clicks > 0:
-        TransformNoInverse.normalize(GlobalState.buy_packages.df, "goods.")
-    return GlobalState.buy_packages.df.to_dict("records")
+        TransformNoInverse.normalize(cache.get(DashBuyPackages.__name__).data_frame, "goods.")
+    return cache.get(DashBuyPackages.__name__).data_frame.to_dict("records")
 
 
 @app.callback(
@@ -89,18 +100,18 @@ def update_output(n_clicks):
 )
 def update_table_type(value):
     if value == "Percentage":
-        GlobalState.buy_packages.apply_transformation(Percentage('goods.'))
+        cache.get(DashBuyPackages.__name__).apply_transformation(Percentage('goods.'))
         normalize_button_hidden = False
     elif value == "Absolute":
-        GlobalState.buy_packages.apply_transformation(Percentage('goods.'), forward=False)
+        cache.get(DashBuyPackages.__name__).apply_transformation(Percentage('goods.'), forward=False)
         normalize_button_hidden = True
     else:
         raise NotImplementedError(value + " not implemented")
 
-    columns = GlobalState.buy_packages.get_table_formatting()
-    figure = GlobalState.buy_packages.get_ploty_plot("goods.", "area")
+    columns = cache.get(DashBuyPackages.__name__).get_table_formatting()
+    figure = cache.get(DashBuyPackages.__name__).get_ploty_plot("goods.", "area")
 
-    return GlobalState.buy_packages.df.to_dict("records"), columns, figure, normalize_button_hidden
+    return cache.get(DashBuyPackages.__name__).data_frame.to_dict("records"), columns, figure, normalize_button_hidden
 
 
 @app.callback(
@@ -116,6 +127,6 @@ def update_buy_packages_plot(data, active_cell, prev_active_cell):
     for cell in cells:
         if cell:
             value = data[cell["row"]].get(cell["column_id"], None)
-            GlobalState.buy_packages.update_value(cell["column_id"], cell["row"], value)
-            GlobalState.buy_packages.patch_ploty_plot(cell, patched_figure)
+            cache.get(DashBuyPackages.__name__).update_value(cell["column_id"], cell["row"], value)
+            cache.get(DashBuyPackages.__name__).patch_ploty_plot(cell, patched_figure)
     return patched_figure

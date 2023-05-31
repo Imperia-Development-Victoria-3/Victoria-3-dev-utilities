@@ -1,83 +1,53 @@
 from dash.dash_table.Format import Format, Scheme, Trim
 from dash.dash_table import FormatTemplate
+from data_formats import DataFormat, DataFormatFolder
 
 from parse_decoder import decode_dictionary
 import pandas as pd
 import plotly.express as px
-import copy
+import os
+from typing import Union
 
 
-class BuyPackages:
+class BuyPackages(DataFormat):
+    prefixes = ["popneed_", "wealth_"]
+    relative_file_location = os.path.normpath("common/buy_packages/00_buy_packages.txt")
 
-    def __init__(self, dictionary):
-        self._dictionary = dictionary
-        self._interpret_buy_packages(dictionary)
+    def __init__(self, data: Union[dict, str]):
+        super().__init__(data, BuyPackages.prefixes)
+        self.data_frame = None
 
+        self.interpret()
         self._transforms = dict()
 
-    def _interpret_buy_packages(self, dictionary):
-        self._dictionary = dictionary
-        dictionary = copy.deepcopy(dictionary)
-        packages = [0] * len(dictionary)
-        for key, value in dictionary.items():
-            if type(key) == str:
-                name, index = key.split("_")
-                # just getting rid of the popneed qualifier as it is uninformative
-                for key_2, value_2 in list(value["goods"].items()):
-                    del value["goods"][key_2]
-                    value["goods"]["_".join(key_2.split("_")[1:])] = value_2
-                packages[int(index) - 1] = value
+    def interpret(self):
+        super().interpret()
 
-        self.keys = set()
-        for item in packages:
-            self.keys |= set(item.keys())
-            self.keys |= set(item["goods"].keys())
+        packages = [0] * len(self.data)
+        for key, value in self.data.items():
+            packages[int(key) - 1] = value
 
-        self.df = pd.json_normalize(packages, sep='.')
-        self.df = self.df.applymap(float)
-
-    def get_iterable(self, key):
-        if key not in self.keys:
-            error_message = "Invalid key for buy packages. You tried: \"" + key + "\" but the options are: " + str(
-                self.keys)
-            raise ValueError(error_message)
-
-        filtered = self.df.filter(like=key, axis=1)
-        yield from filtered.itertuples(index=False)
+        self.data_frame = pd.json_normalize(packages, sep='.')
+        self.data_frame = self.data_frame.applymap(float)
 
     def update_value(self, key, index, value):
         if value:
             value = float(value)
-        self.df.at[index, key] = value
+        self.data_frame.at[index, key] = value
 
     def export_paradox(self, path):
-
         for transform in sorted(self._transforms, key=lambda t: t.order):
-            transform.apply(self.df, reverse=True)
+            transform.apply(self.data_frame, reverse=True)
 
-        info_list = self.df.to_dict("records")
-        for index, item in enumerate(info_list, 1):
-            for key, value in item.items():
-                if value == value:
-                    if "goods" in key:
-                        self._dictionary["wealth_" + str(index)]["goods"]["popneed_" + key.split(".")[-1]] = str(
-                            round(value))
-                    else:
-                        self._dictionary["wealth_" + str(index)][key] = str(value)
-                else:
-                    try:
-                        if "goods" in key:
-                            del self._dictionary["wealth_" + str(index)]["goods"]["popneed_" + key.split(".")[-1]]
-                        else:
-                            del self._dictionary["wealth_" + str(index)][key]
-                    except KeyError:
-                        ""
+        info_list = self.data_frame.to_dict("records")
+        self.update_dict_with_string_keys(info_list, self._prefix_manager)
+
         string = decode_dictionary(self._dictionary)
         with open(path, "w") as file:
             file.write(string)
 
         for transform in sorted(self._transforms, key=lambda t: t.order, reverse=True):
-            transform.apply(self.df)
+            transform.apply(self.data_frame)
 
     def apply_transformation(self, transformation: "Transform", forward=True):
         transformation.is_forward = forward
@@ -96,15 +66,15 @@ class BuyPackages:
 
         for transform in sorted(self._transforms, key=lambda t: t.order):
             if transform.order < transformation.order:
-                transform.apply(self.df, reverse=True)
+                transform.apply(self.data_frame, reverse=True)
             if transform == transformation:
-                transform.apply(self.df, reverse=True)
+                transform.apply(self.data_frame, reverse=True)
                 del self._transforms[transform]
                 break
 
         for transform in sorted(self._transforms, key=lambda t: t.order, reverse=True):
             if transform.order < transformation.order:
-                transform.apply(self.df)
+                transform.apply(self.data_frame)
 
     def add_transformation(self, transformation: "Transform"):
         if self._transforms.get(transformation):
@@ -112,28 +82,28 @@ class BuyPackages:
 
         for transform in sorted(self._transforms, key=lambda t: t.order):
             if transform.order < transformation.order:
-                transform.apply(self.df, reverse=True)
+                transform.apply(self.data_frame, reverse=True)
             else:
-                transformation.apply(self.df)
+                transformation.apply(self.data_frame)
                 self._transforms[transformation] = transformation
                 break
         else:
-            transformation.apply(self.df)
+            transformation.apply(self.data_frame)
             self._transforms[transformation] = transformation
 
         for transform in sorted(self._transforms, key=lambda t: t.order, reverse=True):
             if transform.order < transformation.order:
-                transform.apply(self.df)
+                transform.apply(self.data_frame)
 
 
 class DashBuyPackages(BuyPackages):
 
-    def __init__(self, dictionary):
-        super().__init__(dictionary)
+    def __init__(self, data: Union[dict, str]):
+        super().__init__(data)
         self.figure_traces = dict()
 
     def get_ploty_plot(self, query, plot_type):
-        filtered = self.df.filter(like=query, axis=1)
+        filtered = self.data_frame.filter(like=query, axis=1)
         if "goods" in query:
             renamed = filtered.rename(columns=lambda x: x.replace('goods.', ''))
         else:
@@ -153,15 +123,15 @@ class DashBuyPackages(BuyPackages):
 
     def patch_ploty_plot(self, cell, patched_figure):
         # if not percentages:
-        data = self.df.filter(like=cell["column_id"], axis=1)
+        data = self.data_frame.filter(like=cell["column_id"], axis=1)
         for key, index in self.figure_traces.items():
             if key in cell["column_id"]:
                 patched_figure["data"][index]["y"][cell["row"]] = data.iat[cell["row"], 0]
 
     def get_table_formatting(self):
-        if self.df.is_percentage:
+        if hasattr(self.data_frame, "is_percentage") and self.data_frame.is_percentage:
             columns = []
-            for name in self.df.columns:
+            for name in self.data_frame.columns:
                 if "political" in name or "total" in name:
                     columns.append({"name": name, "id": name, "type": 'numeric',
                                     "format": Format(precision=2, scheme=Scheme.fixed, trim=Trim.yes)})
@@ -172,5 +142,8 @@ class DashBuyPackages(BuyPackages):
             columns = [
                 {"name": i, "id": i, "type": 'numeric',
                  "format": Format(precision=2, scheme=Scheme.fixed, trim=Trim.yes)}
-                for i in self.df.columns]
+                for i in self.data_frame.columns]
         return columns
+
+
+

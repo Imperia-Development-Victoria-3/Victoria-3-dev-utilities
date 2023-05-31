@@ -6,3 +6,4 @@ dash-table
 plotly
 numpy
 pandas
+flask-caching
