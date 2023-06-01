@@ -35,6 +35,11 @@ class BuyPackages(DataFormat):
             value = float(value)
         self.data_frame.at[index, key] = value
 
+    def update_column(self, column_name, new_column):
+        for i, value in enumerate(new_column):
+            new_column[i] = float(value)
+        self.data_frame[column_name] = new_column
+
     def export_paradox(self, path):
         for transform in sorted(self._transforms, key=lambda t: t.order):
             transform.apply(self.data_frame, reverse=True)
@@ -121,29 +126,35 @@ class DashBuyPackages(BuyPackages):
         self.figure_traces = {trace.name: i for i, trace in enumerate(fig["data"])}
         return fig
 
-    def patch_ploty_plot(self, cell, patched_figure):
+    def patch_ploty_plot_value(self, cell, patched_figure):
         # if not percentages:
         data = self.data_frame.filter(like=cell["column_id"], axis=1)
         for key, index in self.figure_traces.items():
             if key in cell["column_id"]:
                 patched_figure["data"][index]["y"][cell["row"]] = data.iat[cell["row"], 0]
 
+    def patch_ploty_plot_column(self, column_id, patched_figure):
+        # if not percentages:
+        data = self.data_frame.filter(like=column_id, axis=1)
+        print(data, data.to_dict())
+        for key, index in self.figure_traces.items():
+            if key in column_id:
+                patched_figure["data"][index]["y"] = [value for value in data.to_dict()[column_id].values() ]
+
     def get_table_formatting(self):
         if hasattr(self.data_frame, "is_percentage") and self.data_frame.is_percentage:
             columns = []
             for name in self.data_frame.columns:
                 if "political" in name or "total" in name:
-                    columns.append({"name": name, "id": name, "type": 'numeric',
+                    columns.append({"name": name, "id": name, "selectable": True, "type": 'numeric',
                                     "format": Format(precision=2, scheme=Scheme.fixed, trim=Trim.yes)})
                 else:
                     columns.append(
-                        {"name": name, "id": name, "type": 'numeric', "format": FormatTemplate.percentage(2)})
+                        {"name": name, "id": name, "selectable": True, "type": 'numeric',
+                         "format": FormatTemplate.percentage(2)})
         else:
             columns = [
-                {"name": i, "id": i, "type": 'numeric',
+                {"name": i, "id": i, "selectable": True, "type": 'numeric',
                  "format": Format(precision=2, scheme=Scheme.fixed, trim=Trim.yes)}
                 for i in self.data_frame.columns]
         return columns
-
-
-

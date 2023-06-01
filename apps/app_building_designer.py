@@ -1,6 +1,5 @@
-from dash import dcc, html, Input, Output, Patch, dash_table, State
+from dash import dcc, html, Input, Output, Patch, dash_table, State, callback_context
 from dash.dependencies import Input, Output, MATCH, ALL
-from dash import callback_context
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from data_formats import TechnologiesFolder, ProductionMethodGroupsFolder, ProductionMethodsFolder, BuildingGroups, BuildingsFolder, GoodsFolder, PopNeedsFolder, ProductionMethod
