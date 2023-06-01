@@ -5,6 +5,8 @@ def decode_dictionary(dictionary, depth=0):
     result = ""
     for key, value in dictionary.items():
         if type(value) == dict:
+            if len(result) >= 2 and result[-2] == "}":
+                result += "\n"
             result += "\t" * depth + key + " = " + "{" + "\n"
             result += decode_dictionary(value, depth + 1)
         elif type(value) == list:

@@ -7,6 +7,7 @@ import pandas as pd
 import plotly.express as px
 import os
 from typing import Union
+import numpy as np
 
 
 class BuyPackages(DataFormat):
@@ -44,9 +45,11 @@ class BuyPackages(DataFormat):
         for transform in sorted(self._transforms, key=lambda t: t.order):
             transform.apply(self.data_frame, reverse=True)
 
-        info_list = self.data_frame.to_dict("records")
-        self.update_dict_with_string_keys(info_list, self._prefix_manager)
-
+        info_list = self.data_frame.astype(str).replace({'nan': None}).to_dict("records")
+        info_dict = {str(i + 1): value for i, value in enumerate(info_list)}
+        for key, value in info_dict.items():
+            info_dict[key] = self.inverse_json(value)
+        self._dictionary = self.update_nested_dict(info_dict, self._dictionary, self._prefix_manager)
         string = decode_dictionary(self._dictionary)
         with open(path, "w") as file:
             file.write(string)
@@ -100,6 +103,18 @@ class BuyPackages(DataFormat):
             if transform.order < transformation.order:
                 transform.apply(self.data_frame)
 
+    def inverse_json(self, dataframe):
+        out = {}
+        for key, val in dataframe.items():
+            parts = key.split('.')
+            d = out
+            for part in parts[:-1]:
+                if part not in d:
+                    d[part] = {}
+                d = d[part]
+            d[parts[-1]] = val
+        return out
+
 
 class DashBuyPackages(BuyPackages):
 
@@ -136,10 +151,9 @@ class DashBuyPackages(BuyPackages):
     def patch_ploty_plot_column(self, column_id, patched_figure):
         # if not percentages:
         data = self.data_frame.filter(like=column_id, axis=1)
-        print(data, data.to_dict())
         for key, index in self.figure_traces.items():
             if key in column_id:
-                patched_figure["data"][index]["y"] = [value for value in data.to_dict()[column_id].values() ]
+                patched_figure["data"][index]["y"] = [value for value in data.to_dict()[column_id].values()]
 
     def get_table_formatting(self):
         if hasattr(self.data_frame, "is_percentage") and self.data_frame.is_percentage:

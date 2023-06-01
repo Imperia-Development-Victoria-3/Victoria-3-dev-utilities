@@ -34,19 +34,24 @@ class DataFormat:
         else:
             return item
 
-    def update_dict_with_string_keys(self, item, prefix_manager: "PrefixManager" = None):
-        if isinstance(item, dict):
-            updated_dict = {
-                (prefix_manager.add_prefix(k) if prefix_manager else k):
-                    self.update_dict_with_string_keys(v, prefix_manager)
-                for k, v in item.items()
-            }
-            self._dictionary.update(updated_dict)
-            return self._dictionary
-        elif isinstance(item, list):
-            return [self.update_dict_with_string_keys(i, prefix_manager) for i in item]
-        else:
-            return item
+    def update_nested_dict(self, dict1, dict2, prefix_manager: "PrefixManager" = None):
+        for key, value in dict1.items():
+            # print(key)
+            key_2 = prefix_manager.add_prefix(key)
+            if key_2 in dict2:
+                if isinstance(value, dict) and isinstance(dict2[key_2], dict):
+                    dict2[key_2] = self.update_nested_dict(value, dict2[key_2], prefix_manager)
+                elif isinstance(value, list) and isinstance(dict2[key_2], list):
+                    dict2[key_2] = [self.update_nested_dict(d1, d2, prefix_manager) for d1, d2 in
+                                    zip(value, dict2[key_2])]
+                    # If dict1's list is longer, append the remaining items.
+                    if len(value) > len(dict2[key_2]):
+                        dict2[key_2].extend(value[len(dict2[key_2]):])
+                else:
+                    dict2[key_2] = value
+            else:
+                dict2[key_2] = value
+        return dict2
 
     def get_iterable(self, key1="root", key2="root", return_path=False, special_data=None, type_filter=None):
         def search_dict(d, path, seen):
