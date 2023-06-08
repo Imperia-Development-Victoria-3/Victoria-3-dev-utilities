@@ -1,3 +1,4 @@
+import copy
 import os
 from parse_encoder import parse_text_file
 from typing import Union
@@ -5,21 +6,18 @@ from typing import Union
 
 class DataFormat:
     relative_file_location = ""
+    prefixes = []
 
-    def __init__(self, data: Union[dict, str] = None, prefixes: list = None):
-        if isinstance(data, dict):
-            self._dictionary = data
-        elif isinstance(data, str):
-            self._dictionary = parse_text_file(data)  # replace with your function to load data from a file
-        elif isinstance(data, type(None)):
-            self._dictionary = {}
-        else:
-            raise TypeError('data must be a dictionary or a string')
-
+    def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None):
         self.data = {}
-        self._prefix_manager = None
-        if prefixes:
-            self._prefix_manager = PrefixManager(prefixes)
+        self._prefix_manager = PrefixManager(prefixes)
+
+        self.game_folder = game_folder
+        self.mod_folder = mod_folder
+
+        self._game_dictionary = {}
+        self._mod_dictionary = {}
+        self.data_refs = {}
 
     @staticmethod
     def copy_dict_with_string_keys(item, prefix_manager: "PrefixManager" = None):
@@ -34,9 +32,41 @@ class DataFormat:
         else:
             return item
 
+    @staticmethod
+    def add_file_location(dictionary, file_path):
+        for key, value in dictionary.items():
+            value["_source"] = file_path
+
+    def interpret(self):
+        mod_folder_walk = list(os.walk(self.mod_folder))
+        overwritten_files = {os.path.basename(dirpath): filenames for (dirpath, _, filenames) in mod_folder_walk}
+        for dirpath, _, filenames in os.walk(self.game_folder):
+            for filename in filenames:
+                if filename.endswith('.txt'):
+                    file_path = os.path.join(dirpath, filename)
+                    dictionary = parse_text_file(file_path)
+                    self._game_dictionary[file_path] = dictionary
+                    # If not being overwritten by file name then add entries to general data
+                    if filename not in overwritten_files.get(os.path.basename(dirpath), []):
+                        dictionary = DataFormat.copy_dict_with_string_keys(dictionary)
+                        self.add_file_location(dictionary, file_path)
+                        self.data_refs.update(dictionary)
+
+        for dirpath, _, filenames in mod_folder_walk:
+            for filename in filenames:
+                if filename.endswith('.txt'):
+                    file_path = os.path.join(dirpath, filename)
+                    dictionary = parse_text_file(file_path)
+                    self._mod_dictionary[file_path] = dictionary
+
+                    dictionary = DataFormat.copy_dict_with_string_keys(dictionary)
+                    self.add_file_location(dictionary, file_path)
+                    self.data_refs.update(dictionary)
+
+        self.data = copy.deepcopy(self.data_refs)
+
     def update_nested_dict(self, dict1, dict2, prefix_manager: "PrefixManager" = None):
         for key, value in dict1.items():
-            # print(key)
             key_2 = prefix_manager.add_prefix(key)
             if key_2 in dict2:
                 if isinstance(value, dict) and isinstance(dict2[key_2], dict):
@@ -53,7 +83,7 @@ class DataFormat:
                 dict2[key_2] = value
         return dict2
 
-    def get_iterable(self, key1="root", key2="root", return_path=False, special_data=None, type_filter=None):
+    def get_iterable(self, key1="root", key2="root", return_path=False, type_filter=None):
         def search_dict(d, path, seen):
             if id(d) in seen:
                 return
@@ -73,54 +103,48 @@ class DataFormat:
                     for item in value:
                         if isinstance(item, dict):
                             yield from search_dict(item, new_path, seen)
-                        if special_data and isinstance(value, special_data):
+                        if type(value) == type and issubclass(value, DataFormat):
                             yield from search_dict(value.data, new_path, seen)
-                elif special_data and isinstance(value, special_data):
+                elif type(value) == type and issubclass(value, DataFormat):
                     yield from search_dict(value.data, new_path, seen)
 
         yield from search_dict({"root": self.data}, [], set())
 
-    def interpret(self):
-        self.data = DataFormat.copy_dict_with_string_keys(self._dictionary, self._prefix_manager)
+    def link(self, key, external_data):
+        for _, entry in self.items():
+            if entry.get(key):
+                linked_data = entry[key]
+                if isinstance(linked_data, dict):
+                    for name in linked_data.keys():
+                        linked_data[name] = external_data[name]
+                elif isinstance(linked_data, str):
+                    entry[key] = {linked_data: external_data[linked_data]}
 
     def __getitem__(self, key):
-        return self.data[key]
+        return self.data[self._prefix_manager.add_prefix(key)]
 
+    def __setitem__(self, key, value):
+        self.data[self._prefix_manager.add_prefix(key)] = value
 
-class DataFormatFolder(DataFormat):
+    def __delitem__(self, key):
+        del self.data[self._prefix_manager.add_prefix(key)]
 
-    def __init__(self, folder: str, folder_of: type = DataFormat):
-        super().__init__()
-        self.folder = folder
-        self.folder_of = folder_of
-        self.flattened_refs = {}
+    def __contains__(self, key):
+        return self._prefix_manager.add_prefix(key) in self.data
 
-    def interpret(self):
-        for dirpath, dirnames, filenames in os.walk(self.folder):
-            for filename in filenames:
-                if filename.endswith('.txt'):
-                    file_path = os.path.join(dirpath, filename)
-                    dictionary = parse_text_file(file_path)
-                    technology_file = self.folder_of(dictionary)
-                    self.data[filename] = technology_file
+    def keys(self):
+        yield from self.data.keys()
 
-    def construct_refs(self):
-        for file in self.data.values():
-            for real_key, value in file.data.items():
-                self.flattened_refs[real_key] = value
+    def values(self):
+        yield from self.data.values()
 
-    def get_iterable(self, key1="root", key2="root", return_path=False, special_data=None, type_filter=None):
-        if not special_data:
-            special_data = self.folder_of
-        yield from super().get_iterable(key1, key2, return_path, special_data, type_filter)
-
-    def __getitem__(self, key):
-        return self.flattened_refs[key]
+    def items(self):
+        yield from self.data.items()
 
 
 class PrefixManager:
-    def __init__(self, prefixes):
-        self._prefixes = {prefix: "" for prefix in prefixes}
+    def __init__(self, prefixes: list = None):
+        self._prefixes = {prefix: "" for prefix in prefixes} if prefixes else {}
         self._memory = {}
 
     def remove_prefix(self, key):

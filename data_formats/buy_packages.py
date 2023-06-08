@@ -1,6 +1,6 @@
 from dash.dash_table.Format import Format, Scheme, Trim
 from dash.dash_table import FormatTemplate
-from data_formats import DataFormat, DataFormatFolder
+from data_formats import DataFormat
 
 from parse_decoder import decode_dictionary
 import pandas as pd

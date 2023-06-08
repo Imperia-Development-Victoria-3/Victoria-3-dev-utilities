@@ -2,15 +2,15 @@ from dash import dcc, html, Input, Output, Patch, dash_table, State, callback_co
 from dash.dependencies import Input, Output, MATCH, ALL
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-from data_formats import TechnologiesFolder, ProductionMethodGroupsFolder, ProductionMethodsFolder, BuildingGroups, BuildingsFolder, GoodsFolder, PopNeedsFolder, ProductionMethod
+from data_formats import Technologies, ProductionMethodGroups, ProductionMethods, BuildingGroups, Buildings, Goods, PopNeeds, ProductionMethod
 import json
 
 from app import app, cache
 
 
 def get_layout():
-    building_list = list(cache.get(BuildingsFolder.__name__).flattened_refs.keys()) if cache.get(
-        BuildingsFolder.__name__) else []
+    building_list = list(cache.get(Buildings.__name__).flattened_refs.keys()) if cache.get(
+        Buildings.__name__) else []
     return html.Div([
         dcc.Dropdown(
             id='building-dropdown',
@@ -26,8 +26,8 @@ def get_layout():
     ])
 
 
-requirements = [ProductionMethodGroupsFolder, ProductionMethodsFolder, BuildingGroups,
-                BuildingsFolder, GoodsFolder, TechnologiesFolder]
+requirements = [ProductionMethodGroups, ProductionMethods, BuildingGroups,
+                Buildings, Goods, Technologies]
 
 
 @app.callback(
@@ -37,13 +37,13 @@ def update_method_dropdowns(selected_building):
     if not selected_building:
         return []
 
-    cache.set("currently_selected_building", cache.get(BuildingsFolder.__name__)[selected_building])
+    cache.set("currently_selected_building", cache.get(Buildings.__name__)[selected_building])
     prod_methods = cache.get("currently_selected_building")["production_method_groups"]
     dropdowns = []
     for name, group in prod_methods.items():
         production_methods = [method for method in group["production_methods"].keys()]
         production_method = ProductionMethod(production_methods[0], list(group["production_methods"].values())[0],
-                                             cache.get(GoodsFolder.__name__))
+                                             cache.get(Goods.__name__))
         dropdown = html.Div([
             dcc.Dropdown(
                 id={'type': 'dropdown', 'index': name},
@@ -102,7 +102,7 @@ def update_summary(input_values_add, input_values_mul, output_values_add, output
                 key = id['index'].rsplit('-', 1)[0]
                 # Convert value to float and add to the sum for this key
                 try:
-                    subtotal = float(cache.get(GoodsFolder.__name__)[key]["cost"]) * float(
+                    subtotal = float(cache.get(Goods.__name__)[key]["cost"]) * float(
                         value) if is_goods else float(value)
                     sums[key] = sums.get(key, 0) + subtotal
                 except ValueError:

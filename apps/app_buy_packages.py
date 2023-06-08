@@ -1,7 +1,7 @@
 from dash import dcc, html, Input, Output, Patch, dash_table, State, callback_context
 from data_utils import TransformNoInverse, Percentage, PriceCompensation
 from dash.exceptions import PreventUpdate
-from data_formats import DashBuyPackages, GoodsFolder, PopNeedsFolder
+from data_formats import DashBuyPackages, Goods, PopNeeds
 import numpy as np
 from app import app, cache
 
@@ -59,7 +59,7 @@ def get_layout():
     ])
 
 
-requirements = [DashBuyPackages, GoodsFolder, PopNeedsFolder]
+requirements = [DashBuyPackages, Goods, PopNeeds]
 
 
 @app.callback(
@@ -77,7 +77,7 @@ def store_previous_data(previous_data):
     prevent_initial_call=True
 )
 def update_transformations(transforms):
-    transformation = PriceCompensation(cache.get(GoodsFolder.__name__), cache.get(PopNeedsFolder.__name__))
+    transformation = PriceCompensation(cache.get(Goods.__name__), cache.get(PopNeeds.__name__))
     if 'price' in transforms:
         cache.get(DashBuyPackages.__name__).apply_transformation(transformation)
     else:

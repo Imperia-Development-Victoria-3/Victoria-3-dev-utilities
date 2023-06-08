@@ -1,55 +1,43 @@
-from data_formats import DataFormat, DataFormatFolder
-from parse_encoder import parse_text_file
+from data_formats import DataFormat
 import os
-from typing import Union
 
 
 class ProductionMethodGroups(DataFormat):
     prefixes = ["building_"]
-
-    def __init__(self, data: Union[dict, str], production_methods_folder: "ProductionMethodsFolder" = None):
-        super().__init__(data, ProductionMethodGroups.prefixes)
-        self._production_methods_folder = production_methods_folder
-        self.interpret()
-
-    def interpret(self):
-        super().interpret()
-        # Link production methods directly
-        if self._production_methods_folder:
-            for key, value in self.data.items():
-                if value.get("production_methods"):
-                    production_methods = value["production_methods"]
-                    for production_method in production_methods:
-                        production_methods[production_method] = self._production_methods_folder[production_method]
-
-
-class ProductionMethodGroupsFolder(DataFormatFolder):
     relative_file_location = os.path.normpath("common/production_method_groups")
+    data_links = {"ProductionMethods": "production_methods"}
 
-    def __init__(self, data: str, production_methods_folder: "ProductionMethodsFolder" = None,
-                 folder_of: type = ProductionMethodGroups):
-        super().__init__(data, folder_of)
-        self.production_methods_folder = production_methods_folder
+    def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None, link_data: list = None):
+        if not prefixes:
+            prefixes = ProductionMethodGroups.prefixes
+        else:
+            prefixes += ProductionMethodGroups.prefixes
+
+        game_version = os.path.join(game_folder, ProductionMethodGroups.relative_file_location)
+        mod_version = os.path.join(mod_folder, ProductionMethodGroups.relative_file_location)
+        super().__init__(game_version, mod_version, prefixes=prefixes)
         self.interpret()
-        self.construct_refs()
 
-    def interpret(self):
-        for dirpath, dirnames, filenames in os.walk(self.folder):
-            for filename in filenames:
-                if filename.endswith('.txt'):
-                    file_path = os.path.join(dirpath, filename)
-                    dictionary = parse_text_file(file_path)
-                    building_file = ProductionMethodGroups(dictionary, self.production_methods_folder)
-                    self.data[filename] = building_file
+        if link_data:
+            for external_data in link_data:
+                self.link(ProductionMethodGroups.data_links[type(external_data).__name__], external_data)
 
 
 if __name__ == '__main__':
-    from constants import Constants
-    from data_formats import ProductionMethodsFolder
+    import os
+    from constants import Test
+    from data_formats import ProductionMethods
 
-    production_methods_folder = ProductionMethodsFolder(
-        Constants.DEFAULT_GAME_PATH + os.path.normpath("/common/production_methods"))
-    production_method_groups_folder = ProductionMethodGroupsFolder(
-        Constants.DEFAULT_GAME_PATH + os.path.normpath("/common/production_method_groups"), production_methods_folder)
+    production_methods = ProductionMethods(Test.game_directory, Test.mod_directory)
+    production_method_groups = ProductionMethodGroups(Test.game_directory, Test.mod_directory, link_data=[production_methods])
 
-    print(list(production_method_groups_folder.get_iterable("production_methods", '01_industry.txt', return_path=True)))
+    print("\n GAME FILES \n")
+    for name, element in production_method_groups.items():
+        if Test.game_directory in element["_source"]:
+            print(name, element)
+
+    print("\n MOD FILES \n")
+    for name, element in production_method_groups.items():
+        if Test.mod_directory in element["_source"]:
+            print(name, element)
+

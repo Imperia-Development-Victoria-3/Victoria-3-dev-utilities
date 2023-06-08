@@ -1,9 +1,8 @@
 import os
 import operator
 from collections import defaultdict
-from typing import Union
 
-from data_formats import DataFormat, DataFormatFolder
+from data_formats import DataFormat
 from parse_encoder import parse_text_file
 from dash import dcc, html, Input, Output, Patch, dash_table, State
 
@@ -19,7 +18,7 @@ class ProductionMethod:
         self.shares = defaultdict(lambda: defaultdict(float))
         self.interpret()
 
-        print(len(self.input_goods), len(self.output_goods), len(self.workforce))
+        # print(len(self.input_goods), len(self.output_goods), len(self.workforce))
         # for _, item in self.input_goods.items():
         #     for key, value in item.items():
         #         for key2, value2 in value.items():
@@ -88,49 +87,40 @@ class ProductionMethod:
 
 class ProductionMethods(DataFormat):
     prefixes = ["building_"]
-
-    def __init__(self, data: Union[dict, str], technologies_folder: "TechnologiesFolder" = None):
-        super().__init__(data, ProductionMethods.prefixes)
-        self._technologies_folder = technologies_folder
-        self.interpret()
-
-    def interpret(self):
-        super().interpret()
-        if self._technologies_folder:
-            for key, value in self.data.items():
-                if value.get("unlocking_technologies"):
-                    unlocking_technologies = value["unlocking_technologies"]
-                    for technology in unlocking_technologies:
-                        unlocking_technologies[technology] = self._technologies_folder[technology]
-
-
-class ProductionMethodsFolder(DataFormatFolder):
     relative_file_location = os.path.normpath("common/production_methods")
+    data_links = {"Technologies": "unlocking_technologies"}
 
-    def __init__(self, data: str, technologies_folder: "TechnologiesFolder" = None,
-                 folder_of: type = ProductionMethods):
-        super().__init__(data, folder_of)
-        self.technologies_folder = technologies_folder
+    def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None, link_data: list = None):
+        if not prefixes:
+            prefixes = ProductionMethods.prefixes
+        else:
+            prefixes += ProductionMethods.prefixes
+
+        game_version = os.path.join(game_folder, ProductionMethods.relative_file_location)
+        mod_version = os.path.join(mod_folder, ProductionMethods.relative_file_location)
+        super().__init__(game_version, mod_version, prefixes=prefixes)
         self.interpret()
-        self.construct_refs()
 
-    def interpret(self):
-        for dirpath, dirnames, filenames in os.walk(self.folder):
-            for filename in filenames:
-                if filename.endswith('.txt'):
-                    file_path = os.path.join(dirpath, filename)
-                    dictionary = parse_text_file(file_path)
-                    building_file = ProductionMethods(dictionary, self.technologies_folder)
-                    self.data[filename] = building_file
+        if link_data:
+            for external_data in link_data:
+                self.link(ProductionMethods.data_links[type(external_data).__name__], external_data)
 
 
 if __name__ == '__main__':
-    from constants import Constants
-    from data_formats import TechnologiesFolder
+    import os
+    from constants import Test
+    from data_formats import Technologies
 
-    technologies_folder = TechnologiesFolder(
-        Constants.DEFAULT_GAME_PATH + os.path.normpath("/common/technology/technologies"))
-    production_method_folder = ProductionMethodsFolder(
-        Constants.DEFAULT_GAME_PATH + os.path.normpath("/common/production_methods"), technologies_folder)
+    technologies = Technologies(Test.game_directory, Test.mod_directory)
+    production_methods = ProductionMethods(Test.game_directory, Test.mod_directory, link_data=[technologies])
 
-    print(list(production_method_folder.get_iterable("era", return_path=True)))
+    print("\nGAME FILES\n")
+    for name, element in production_methods.items():
+        if Test.game_directory in element["_source"]:
+            print(name, element)
+
+    print("\nMOD FILES\n")
+    for name, element in production_methods.items():
+        if Test.mod_directory in element["_source"]:
+            print(name, element)
+

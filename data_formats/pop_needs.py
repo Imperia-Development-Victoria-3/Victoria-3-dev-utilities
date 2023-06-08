@@ -1,32 +1,34 @@
-from data_formats import DataFormat, DataFormatFolder
+from data_formats import DataFormat
 import os
-from typing import Union
 
 
 class PopNeeds(DataFormat):
     prefixes = ["popneed_"]
-
-    def __init__(self, data: Union[dict, str]):
-        super().__init__(data, PopNeeds.prefixes)
-        self.interpret()
-        self._transforms = {}
-
-
-class PopNeedsFolder(DataFormatFolder):
     relative_file_location = os.path.normpath("common/pop_needs")
 
-    def __init__(self, data: str, folder_of: type = PopNeeds):
-        super().__init__(data, folder_of)
+    def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None):
+        if not prefixes:
+            prefixes = PopNeeds.prefixes
+        else:
+            prefixes += PopNeeds.prefixes
+
+        game_version = os.path.join(game_folder, PopNeeds.relative_file_location)
+        mod_version = os.path.join(mod_folder, PopNeeds.relative_file_location)
+        super().__init__(game_version, mod_version, prefixes=prefixes)
         self.interpret()
-        self.construct_refs()
 
 
 if __name__ == '__main__':
-    from parse_encoder import parse_text_file
-    from constants import Constants
+    import os
+    from constants import Test
 
-    # Test the parsing function
-    dictionary = parse_text_file(
-        Constants.DEFAULT_GAME_PATH + os.path.normpath("\\common\\pop_needs\\00_pop_needs.txt"))
-    pop_needs = PopNeeds(dictionary)
-    print(list(pop_needs.get_iterable("default", return_path=True)))
+    pop_needs = PopNeeds(Test.game_directory, Test.mod_directory)
+    print("\n GAME FILES \n")
+    for name, element in pop_needs.items():
+        if Test.game_directory in element["_source"]:
+            print(name, element)
+
+    print("\n MOD FILES \n")
+    for name, element in pop_needs.items():
+        if Test.mod_directory in element["_source"]:
+            print(name, element)

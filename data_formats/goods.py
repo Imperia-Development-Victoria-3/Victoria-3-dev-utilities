@@ -1,33 +1,33 @@
-from data_formats import DataFormat, DataFormatFolder
+from data_formats import DataFormat
 import os
-from typing import Union
 
 
 class Goods(DataFormat):
-
-    def __init__(self, data: Union[dict, str]):
-        super().__init__(data)
-        self.interpret()
-        self._transforms = {}
-
-
-class GoodsFolder(DataFormatFolder):
     relative_file_location = os.path.normpath("common/goods")
 
-    def __init__(self, data: str, folder_of: type = Goods):
-        super().__init__(data, folder_of)
+    def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None):
+        if not prefixes:
+            prefixes = Goods.prefixes
+        else:
+            prefixes += Goods.prefixes
+
+        game_version = os.path.join(game_folder, Goods.relative_file_location)
+        mod_version = os.path.join(mod_folder, Goods.relative_file_location)
+        super().__init__(game_version, mod_version, prefixes=prefixes)
         self.interpret()
-        self.construct_refs()
 
 
 if __name__ == '__main__':
-    from parse_decoder import decode_dictionary
-    from parse_encoder import parse_text_file
-    from constants import Constants
     import os
+    from constants import Test
 
-    # Test the parsing function
-    dictionary = parse_text_file(Constants.DEFAULT_GAME_PATH + os.path.normpath("\\common\\goods\\00_goods.txt"))
-    goods = Goods(dictionary)
-    print(list(goods.get_iterable("category", return_path=True)))
-    print(decode_dictionary(dictionary))
+    goods = Goods(Test.game_directory, Test.mod_directory)
+    print("\n GAME FILES \n")
+    for name, element in goods.items():
+        if Test.game_directory in element["_source"]:
+            print(name, element)
+
+    print("\n MOD FILES \n")
+    for name, element in goods.items():
+        if Test.mod_directory in element["_source"]:
+            print(name, element)

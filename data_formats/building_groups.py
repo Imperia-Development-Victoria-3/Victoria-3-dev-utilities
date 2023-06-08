@@ -5,7 +5,7 @@ from typing import Union
 
 
 class BuildingGroups(DataFormat):
-    relative_file_location = os.path.normpath("common/building_groups/00_building_groups.txt")
+    relative_file_location = os.path.normpath("common/building_groups")
 
     default_values = {
         "parent_group": "None",
@@ -29,18 +29,34 @@ class BuildingGroups(DataFormat):
         }},
         "hiring_rate": 0,
         "proportionality_limit": 0,
-        "hires_unemployed_only": "no"
+        "hires_unemployed_only": "no",
+        "infrastructure_usage_per_level": 0,
+        "fired_pops_become_radical": "yes",
+        "is_government_funded": "no",
+        "subsidized": "no",
+        "pays_taxes": "yes",
     }
 
-    def __init__(self, data: Union[dict, str]):
-        super().__init__(data)
+    def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None):
+        if not prefixes:
+            prefixes = BuildingGroups.prefixes
+        else:
+            prefixes += BuildingGroups.prefixes
+
+        game_version = os.path.join(game_folder, BuildingGroups.relative_file_location)
+        mod_version = os.path.join(mod_folder, BuildingGroups.relative_file_location)
+        super().__init__(game_version, mod_version, prefixes=prefixes)
         self.interpret()
-        self.keys = list(BuildingGroups.default_values.keys())
+
+    def interpret(self):
+        super().interpret()
+        for name, building_group in self.data.items():
+            self.overwrite_values(name, building_group, self.data)
 
     def overwrite_values(self, name, building_group, dictionary):
         if building_group.get("parent_group"):
             parent = building_group["parent_group"]
-            if not dictionary[parent].get("finished"):
+            if not dictionary[parent].get("_finished"):
                 self.overwrite_values(parent, dictionary[parent], dictionary)
 
             new_building_group = copy.deepcopy(dictionary[parent])
@@ -51,18 +67,21 @@ class BuildingGroups(DataFormat):
             for key, value in building_group.items():
                 new_building_group[key] = value
 
-        new_building_group["finished"] = True
+        new_building_group["_finished"] = True
         dictionary[name] = new_building_group
-
-    def interpret(self):
-        super().interpret()
-        for name, building_group in self.data.items():
-            self.overwrite_values(name, building_group, self.data)
 
 
 if __name__ == '__main__':
-    from parse_encoder import parse_text_file
+    import os
+    from constants import Test
 
-    dictionary = parse_text_file("../00_building_groups.txt")
-    goods = BuildingGroups(dictionary)
-    print(list(goods.get_iterable()))
+    building_groups = BuildingGroups(Test.game_directory, Test.mod_directory)
+    print("\n GAME FILES \n")
+    for name, element in building_groups.items():
+        if Test.game_directory in element["_source"]:
+            print(name, element)
+
+    print("\n MOD FILES \n")
+    for name, element in building_groups.items():
+        if Test.mod_directory in element["_source"]:
+            print(name, element)
