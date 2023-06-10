@@ -54,21 +54,24 @@ class BuyPackages(DataFormat):
         for transform in sorted(self._transforms, key=lambda t: t.order):
             transform.apply(self.data_frame, reverse=True)
 
-        info_list = self.data_frame.astype(str).replace({'nan': None}).to_dict("records")
+        info_list = self.data_frame.fillna(0)  # replacing Nans with 0
+        for col in info_list.columns:
+            if col.startswith("goods."):
+                info_list[col] = info_list[col].astype(int)
+
+        info_list = info_list.astype(str)
+        info_list = info_list.replace("0", np.nan).to_dict("records")
         info_dict = {str(i + 1): value for i, value in enumerate(info_list)}
         for key, value in info_dict.items():
             info_dict[key] = self.inverse_json(value)
 
-        for key, value in info_dict.items():
-            self.data[self._prefix_manager.add_prefix(key)] = value
-
+        self.data = DataFormat.copy_dict_with_string_keys_inverse(info_dict, self._prefix_manager)
+        print(self.data)
         self.update_if_needed()
 
         for path, dictionary in self._mod_dictionary.items():
-            folder_path = os.path.dirname(path)  # Extract the directory path from the file path
-            # Create the folder if it doesn't exist
+            folder_path = os.path.dirname(path)
             if not os.path.exists(folder_path):
-
                 os.makedirs(folder_path)
             with open(path, 'w') as file:
                 file.write(decode_dictionary(dictionary))

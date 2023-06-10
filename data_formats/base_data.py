@@ -1,8 +1,8 @@
 import copy
 import os
 from parse_encoder import parse_text_file
-from deepdiff import DeepDiff, path, extract
-from data_utils import set_nested_obj, exclude_int_keys_callback
+from deepdiff import DeepDiff, extract
+from data_utils import set_nested_obj, exclude_int_keys_callback, _path_to_elements, extract, del_nested_obj
 
 
 class DataFormat:
@@ -30,6 +30,19 @@ class DataFormat:
             }
         elif isinstance(item, list):
             return [DataFormat.copy_dict_with_string_keys(i, prefix_manager) for i in item]
+        else:
+            return item
+
+    @staticmethod
+    def copy_dict_with_string_keys_inverse(item, prefix_manager: "PrefixManager" = None):
+        if isinstance(item, dict):
+            return {
+                (prefix_manager.add_prefix(k) if prefix_manager else k):
+                    DataFormat.copy_dict_with_string_keys_inverse(v, prefix_manager)
+                for k, v in item.items() if isinstance(k, str)
+            }
+        elif isinstance(item, list):
+            return [DataFormat.copy_dict_with_string_keys_inverse(i, prefix_manager) for i in item]
         else:
             return item
 
@@ -69,40 +82,13 @@ class DataFormat:
                     self.add_file_location(dictionary, file_path)
                     self.data_refs.update(dictionary)
 
-        DataFormat.copy_dict_with_string_keys(self.data_refs)
+        DataFormat.copy_dict_with_string_keys(self.data_refs, self._prefix_manager)
         self.data = copy.deepcopy(self.data_refs)
         self.remove_file_location(self.data)
 
-    # def update_complex_structure(self, data, data_ref, _dictionary, prefix_manager: "PrefixManager" = None):
-    #     for key, value in data.items():
-    #         if key in data_ref:
-    #             file_path = data_ref[key]["_source"]
-    #             if isinstance(value, dict) and file_path in _dictionary and key in _dictionary[file_path]:
-    #                 _dictionary[file_path][key] = \
-    #                     self.update_complex_structure(value, data_ref[key], _dictionary[file_path], prefix_manager)
-    #             elif isinstance(value, list) and file_path in _dictionary and key in _dictionary[file_path]:
-    #                 _dictionary[file_path][key] = [
-    #                     self.update_complex_structure(d1, d2, _dictionary[file_path], prefix_manager) for
-    #                     d1, d2 in zip(value, _dictionary[file_path][key])]
-    #                 # If data's list is longer, append the remaining items.
-    #                 if len(value) > len(_dictionary[file_path][key]):
-    #                     _dictionary[file_path][key].extend(
-    #                         value[len(_dictionary[file_path][key]):])
-    #             else:
-    #                 if file_path in _dictionary:
-    #                     # Check if value in data is a pointer (represented as True), if so, use the corresponding value from data_ref.
-    #                     if value is True:
-    #                         _dictionary[file_path][key] = data_ref[key]
-    #                     else:
-    #                         _dictionary[file_path][key] = value
-    #         else:
-    #             # Handle cases where there is no file reference in data_ref for this key.
-    #             pass
-    #     return _dictionary
-
     def update_if_needed(self):
-        formatted_game_data = {}
-        formatted_mod_data = {}
+        formatted_game_data = copy.deepcopy(self._game_dictionary)
+        formatted_mod_data = copy.deepcopy(self._mod_dictionary)
         for key, value in self.data.items():
             path_string = self.data_refs[key]["_source"]
             if self.game_folder in path_string:
@@ -115,37 +101,46 @@ class DataFormat:
                     formatted_mod_data[path_string] = {}
                 formatted_mod_data[path_string][key] = value
 
-        # mod_diff = DeepDiff(self._mod_dictionary, formatted_mod_data, exclude_obj_callback=exclude_int_keys_callback)
         game_diff = DeepDiff(self._game_dictionary, formatted_game_data, exclude_obj_callback=exclude_int_keys_callback)
-        filenames = set()
-        # print(game_diff)
-        for type_name, differences in game_diff.items():
+        mod_diff = DeepDiff(self._mod_dictionary, formatted_mod_data, exclude_obj_callback=exclude_int_keys_callback)
+        for type_name, differences in list(game_diff.items()):
             if type_name == "dictionary_item_added" or type_name == "dictionary_item_removed":
                 for index, dict_path in list(enumerate(differences)):
+                    elements_old = _path_to_elements(dict_path, root_element=None)
                     new_path = dict_path.replace(self.game_folder, self.mod_folder)
-                    print(extract(self._game_dictionary, dict_path))
-                    elements = path._path_to_elements(dict_path, root_element=None)
-                    filenames.add(os.path.normpath(elements[0][0]))
-                    differences.remove(dict_path)
-                    differences.add(new_path)
+                    elements = _path_to_elements(new_path, root_element=None)
+                    if not self._mod_dictionary.get(new_path):
+                        self._mod_dictionary[elements[0][0]] = self._game_dictionary[elements_old[0][0]]
+                    elif type_name == "dictionary_item_added":
+                        set_nested_obj(self._mod_dictionary, new_path, extract(formatted_game_data, dict_path))
+                    if type_name == "dictionary_item_removed":
+                        del_nested_obj(self._mod_dictionary, new_path)
+                    self.data_refs[elements[1][0]]["_source"] = elements[0][0]
             else:
                 for dict_path, change in list(differences.items()):
+                    elements_old = _path_to_elements(dict_path, root_element=None)
                     new_path = dict_path.replace(self.game_folder, self.mod_folder)
-                    print(dict_path)
-                    elements = path._path_to_elements(dict_path, root_element=None)
-                    print(elements[0][0])
-                    filenames.add(os.path.normpath(elements[0][0]))
-                    del differences[dict_path]
-                    differences[new_path] = change
-        # print(filenames)
-        for filename in filenames:
-            print(list(self._game_dictionary.keys()), filename)
-            self._mod_dictionary[filename] = self._game_dictionary[filename]
-            del self._game_dictionary[filename]
+                    elements = _path_to_elements(new_path, root_element=None)
+                    if not self._mod_dictionary.get(new_path):
+                        self._mod_dictionary[elements[0][0]] = self._game_dictionary[elements_old[0][0]]
+                    set_nested_obj(self._mod_dictionary, new_path, change["new_value"])
+                    self.data_refs[elements[1][0]]["_source"] = elements[0][0]
 
-        values_changes = game_diff.get("values_changed")
-        for path_string, change in values_changes:
-            set_nested_obj(self._mod_dictionary, path_string, change["new_value"])
+        for type_name, differences in list(mod_diff.items()):
+            if type_name == "dictionary_item_added":
+                for dict_path in differences:
+                    set_nested_obj(self._mod_dictionary, dict_path, extract(formatted_mod_data, dict_path))
+            elif type_name == "dictionary_item_removed":
+                for dict_path in differences:
+                    del_nested_obj(self._mod_dictionary, dict_path)
+            elif type_name == "values_changed":
+                for dict_path, change in list(differences.items()):
+                    set_nested_obj(self._mod_dictionary, dict_path, change["new_value"])
+            elif type_name == "type_changes":
+                for dict_path, change in list(differences.items()):
+                    set_nested_obj(self._mod_dictionary, dict_path, change["new_value"])
+            else:
+                raise NotImplementedError("type_name '" + type_name + "' is not implemented")
 
     def get_iterable(self, key1="root", key2="root", return_path=False, type_filter=None):
         def search_dict(d, path, seen):
