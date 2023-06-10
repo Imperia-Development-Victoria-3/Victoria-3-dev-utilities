@@ -5,8 +5,9 @@ import os
 class PopNeeds(DataFormat):
     prefixes = ["popneed_"]
     relative_file_location = os.path.normpath("common/pop_needs")
+    data_links = {"Goods": ["entry", "goods"]}
 
-    def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None):
+    def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None, link_data: list = None):
         if not prefixes:
             prefixes = PopNeeds.prefixes
         else:
@@ -17,18 +18,24 @@ class PopNeeds(DataFormat):
         super().__init__(game_version, mod_version, prefixes=prefixes)
         self.interpret()
 
+        if link_data:
+            for external_data in link_data:
+                self.replace_at_path(PopNeeds.data_links[type(external_data).__name__], external_data)
+
 
 if __name__ == '__main__':
     import os
     from constants import Test
+    from data_formats import Goods
 
-    pop_needs = PopNeeds(Test.game_directory, Test.mod_directory)
+    goods = Goods(Test.game_directory, Test.mod_directory)
+    pop_needs = PopNeeds(Test.game_directory, Test.mod_directory, link_data=[goods])
     print("\n GAME FILES \n")
     for name, element in pop_needs.items():
-        if Test.game_directory in element["_source"]:
+        if Test.game_directory in pop_needs.data_refs[name]["_source"]:
             print(name, element)
 
     print("\n MOD FILES \n")
     for name, element in pop_needs.items():
-        if Test.mod_directory in element["_source"]:
+        if Test.mod_directory in pop_needs.data_refs[name]["_source"]:
             print(name, element)

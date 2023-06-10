@@ -12,22 +12,31 @@ import numpy as np
 
 class BuyPackages(DataFormat):
     prefixes = ["popneed_", "wealth_"]
-    relative_file_location = os.path.normpath("common/buy_packages/00_buy_packages.txt")
+    relative_file_location = os.path.normpath("common/buy_packages")
 
-    def __init__(self, data: Union[dict, str]):
-        super().__init__(data, BuyPackages.prefixes)
+    def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None):
+        if not prefixes:
+            prefixes = BuyPackages.prefixes
+        else:
+            prefixes += BuyPackages.prefixes
+
+        game_version = os.path.join(game_folder, BuyPackages.relative_file_location)
+        mod_version = os.path.join(mod_folder, BuyPackages.relative_file_location)
+        super().__init__(game_version, mod_version, prefixes=prefixes)
+
         self.data_frame = None
+        self._transforms = dict()
 
         self.interpret()
-        self._transforms = dict()
 
     def interpret(self):
         super().interpret()
 
-        packages = [0] * len(self.data)
-        for key, value in self.data.items():
-            packages[int(key) - 1] = value
+        tmp_data = DataFormat.copy_dict_with_string_keys(self.data, self._prefix_manager)
 
+        packages = [{}] * len(tmp_data)
+        for key, value in tmp_data.items():
+            packages[int(key.split("_")[-1]) - 1] = value
         self.data_frame = pd.json_normalize(packages, sep='.')
         self.data_frame = self.data_frame.applymap(float)
 
@@ -41,7 +50,7 @@ class BuyPackages(DataFormat):
             new_column[i] = float(value)
         self.data_frame[column_name] = new_column
 
-    def export_paradox(self, path):
+    def export_paradox(self):
         for transform in sorted(self._transforms, key=lambda t: t.order):
             transform.apply(self.data_frame, reverse=True)
 
@@ -49,10 +58,20 @@ class BuyPackages(DataFormat):
         info_dict = {str(i + 1): value for i, value in enumerate(info_list)}
         for key, value in info_dict.items():
             info_dict[key] = self.inverse_json(value)
-        self._dictionary = self.update_nested_dict(info_dict, self._dictionary, self._prefix_manager)
-        string = decode_dictionary(self._dictionary)
-        with open(path, "w") as file:
-            file.write(string)
+
+        for key, value in info_dict.items():
+            self.data[self._prefix_manager.add_prefix(key)] = value
+
+        self.update_if_needed()
+
+        for path, dictionary in self._mod_dictionary.items():
+            folder_path = os.path.dirname(path)  # Extract the directory path from the file path
+            # Create the folder if it doesn't exist
+            if not os.path.exists(folder_path):
+
+                os.makedirs(folder_path)
+            with open(path, 'w') as file:
+                file.write(decode_dictionary(dictionary))
 
         for transform in sorted(self._transforms, key=lambda t: t.order, reverse=True):
             transform.apply(self.data_frame)
@@ -103,7 +122,8 @@ class BuyPackages(DataFormat):
             if transform.order < transformation.order:
                 transform.apply(self.data_frame)
 
-    def inverse_json(self, dataframe):
+    @staticmethod
+    def inverse_json(dataframe):
         out = {}
         for key, val in dataframe.items():
             parts = key.split('.')
@@ -118,8 +138,8 @@ class BuyPackages(DataFormat):
 
 class DashBuyPackages(BuyPackages):
 
-    def __init__(self, data: Union[dict, str]):
-        super().__init__(data)
+    def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None):
+        super().__init__(game_folder, mod_folder, prefixes)
         self.figure_traces = dict()
 
     def get_ploty_plot(self, query, plot_type):

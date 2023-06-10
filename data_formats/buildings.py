@@ -5,8 +5,8 @@ from data_formats import DataFormat
 class Buildings(DataFormat):
     prefixes = ["building_"]
     relative_file_location = os.path.normpath("common/buildings")
-    data_links = {"BuildingGroups": "building_group",
-                  "ProductionMethodGroups": "production_method_groups"}
+    data_links = {"BuildingGroups": ["building_group"],
+                  "ProductionMethodGroups": ["production_method_groups"]}
 
     def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None, link_data: list = None):
         if not prefixes:
@@ -21,17 +21,7 @@ class Buildings(DataFormat):
 
         if link_data:
             for external_data in link_data:
-                self.link(Buildings.data_links[type(external_data).__name__], external_data)
-
-    # def interpret(self):
-    #     super().interpret()
-    #     for name, building in self.data.items():
-    #         if self._building_groups:
-    #             building["group"] = {name: self._building_groups[building["group"]]}
-    #         if self._production_method_groups:
-    #             for production_method_group in building["production_method_groups"]:
-    #                 building["production_method_groups"][production_method_group] = self._production_method_groups[
-    #                     production_method_group]
+                self.replace_at_path(Buildings.data_links[type(external_data).__name__], external_data)
 
 
 if __name__ == '__main__':
@@ -46,10 +36,10 @@ if __name__ == '__main__':
 
     print("\n GAME FILES \n")
     for name, element in buildings.items():
-        if Test.game_directory in element["_source"]:
+        if Test.game_directory in buildings.data_refs[name]["_source"]:
             print(name, element)
 
     print("\n MOD FILES \n")
     for name, element in buildings.items():
-        if Test.mod_directory in element["_source"]:
+        if Test.mod_directory in buildings.data_refs[name]["_source"]:
             print(name, element)

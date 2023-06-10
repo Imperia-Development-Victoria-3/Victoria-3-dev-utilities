@@ -7,3 +7,4 @@ plotly
 numpy
 pandas
 flask-caching
+deepdiff

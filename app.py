@@ -20,7 +20,4 @@ cache = MyDict()
 # })
 
 cache.set("game_directory", os.path.normpath("C:/Program Files (x86)/Steam/steamapps/common/Victoria 3/game"))
-
-home = os.path.normpath(str(Path.home()))
-DEFAULT_MOD_PATH = home + os.path.normpath("/Documents/Paradox Interactive/Victoria 3/mod/Victoria-3-Dev")
-cache.set("mod_directory", os.path.normpath(DEFAULT_MOD_PATH))
+cache.set("mod_directory", os.path.join(Path.home(), os.path.normpath("Documents/Paradox Interactive/Victoria 3/mod/Victoria-3-Dev")))

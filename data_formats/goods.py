@@ -24,10 +24,10 @@ if __name__ == '__main__':
     goods = Goods(Test.game_directory, Test.mod_directory)
     print("\n GAME FILES \n")
     for name, element in goods.items():
-        if Test.game_directory in element["_source"]:
+        if Test.game_directory in goods.data_refs[name]["_source"]:
             print(name, element)
 
     print("\n MOD FILES \n")
     for name, element in goods.items():
-        if Test.mod_directory in element["_source"]:
+        if Test.mod_directory in goods.data_refs[name]["_source"]:
             print(name, element)

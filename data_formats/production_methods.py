@@ -18,12 +18,6 @@ class ProductionMethod:
         self.shares = defaultdict(lambda: defaultdict(float))
         self.interpret()
 
-        # print(len(self.input_goods), len(self.output_goods), len(self.workforce))
-        # for _, item in self.input_goods.items():
-        #     for key, value in item.items():
-        #         for key2, value2 in value.items():
-        #             print(key2, value2)
-
     def interpret(self):
         def handle_modifier(modifier_object, split_name_index):
             for name, number in modifier_object.items():
@@ -88,7 +82,7 @@ class ProductionMethod:
 class ProductionMethods(DataFormat):
     prefixes = ["building_"]
     relative_file_location = os.path.normpath("common/production_methods")
-    data_links = {"Technologies": "unlocking_technologies"}
+    data_links = {"Technologies": ["unlocking_technologies"]}
 
     def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None, link_data: list = None):
         if not prefixes:
@@ -103,7 +97,7 @@ class ProductionMethods(DataFormat):
 
         if link_data:
             for external_data in link_data:
-                self.link(ProductionMethods.data_links[type(external_data).__name__], external_data)
+                self.replace_at_path(ProductionMethods.data_links[type(external_data).__name__], external_data)
 
 
 if __name__ == '__main__':
@@ -116,11 +110,11 @@ if __name__ == '__main__':
 
     print("\nGAME FILES\n")
     for name, element in production_methods.items():
-        if Test.game_directory in element["_source"]:
+        if Test.game_directory in  production_methods.data_refs[name]["_source"]:
             print(name, element)
 
     print("\nMOD FILES\n")
     for name, element in production_methods.items():
-        if Test.mod_directory in element["_source"]:
+        if Test.mod_directory in production_methods.data_refs[name]["_source"]:
             print(name, element)
 

@@ -24,12 +24,12 @@ if __name__ == '__main__':
     technologies = Technologies(Test.game_directory, Test.mod_directory)
     print("\n GAME FILES \n")
     for name, element in technologies.items():
-        if Test.game_directory in element["_source"]:
+        if Test.game_directory in technologies.data_refs[name]["_source"]:
             print(name, element)
 
     print("\n MOD FILES \n")
     for name, element in technologies.items():
-        if Test.mod_directory in element["_source"]:
+        if Test.mod_directory in technologies.data_refs[name]["_source"]:
             print(name, element)
 
     print(technologies.game_folder)

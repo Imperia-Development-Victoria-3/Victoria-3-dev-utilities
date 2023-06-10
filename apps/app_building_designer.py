@@ -9,7 +9,7 @@ from app import app, cache
 
 
 def get_layout():
-    building_list = list(cache.get(Buildings.__name__).flattened_refs.keys()) if cache.get(
+    building_list = list(cache.get(Buildings.__name__).keys()) if cache.get(
         Buildings.__name__) else []
     return html.Div([
         dcc.Dropdown(
@@ -38,9 +38,11 @@ def update_method_dropdowns(selected_building):
         return []
 
     cache.set("currently_selected_building", cache.get(Buildings.__name__)[selected_building])
+    print(cache.get(Buildings.__name__)[selected_building])
     prod_methods = cache.get("currently_selected_building")["production_method_groups"]
     dropdowns = []
     for name, group in prod_methods.items():
+        print(group)
         production_methods = [method for method in group["production_methods"].keys()]
         production_method = ProductionMethod(production_methods[0], list(group["production_methods"].values())[0],
                                              cache.get(Goods.__name__))

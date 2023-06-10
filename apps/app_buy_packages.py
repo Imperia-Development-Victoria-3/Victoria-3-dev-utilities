@@ -93,7 +93,7 @@ def update_transformations(transforms):
     prevent_initial_call=True)
 def update_output(n_clicks):
     if n_clicks > 0:
-        cache.get(DashBuyPackages.__name__).export_paradox("00_buy_packages_copy.txt")
+        cache.get(DashBuyPackages.__name__).export_paradox()
     raise PreventUpdate
 
 
@@ -191,8 +191,6 @@ def update_table(n_clicks, n_clicks_2, input_value, selected_columns, selected_c
                             row[col_id] *= input_value
                     elif overwrite_zero:
                         if button_id == 'button-add':
-                            row[col_id] = input_value
-                        elif button_id == 'button-mult':
                             row[col_id] = input_value
         elif selected_cells:  # if no column is selected
             for cell in selected_cells:

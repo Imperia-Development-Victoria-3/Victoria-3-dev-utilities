@@ -5,7 +5,7 @@ import os
 class ProductionMethodGroups(DataFormat):
     prefixes = ["building_"]
     relative_file_location = os.path.normpath("common/production_method_groups")
-    data_links = {"ProductionMethods": "production_methods"}
+    data_links = {"ProductionMethods": ["production_methods"]}
 
     def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None, link_data: list = None):
         if not prefixes:
@@ -20,7 +20,7 @@ class ProductionMethodGroups(DataFormat):
 
         if link_data:
             for external_data in link_data:
-                self.link(ProductionMethodGroups.data_links[type(external_data).__name__], external_data)
+                self.replace_at_path(ProductionMethodGroups.data_links[type(external_data).__name__], external_data)
 
 
 if __name__ == '__main__':
@@ -33,11 +33,11 @@ if __name__ == '__main__':
 
     print("\n GAME FILES \n")
     for name, element in production_method_groups.items():
-        if Test.game_directory in element["_source"]:
+        if Test.mod_directory in production_method_groups.data_refs[name]["_source"]:
             print(name, element)
 
     print("\n MOD FILES \n")
     for name, element in production_method_groups.items():
-        if Test.mod_directory in element["_source"]:
+        if Test.mod_directory in production_method_groups.data_refs[name]["_source"]:
             print(name, element)
 

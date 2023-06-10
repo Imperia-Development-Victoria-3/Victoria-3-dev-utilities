@@ -14,16 +14,18 @@ class PriceCompensation(Transform):
     def forward(self, data):
         for column in data.columns:
             original_name = column.split(".")[-1]
-            if self.need_to_good.get(original_name):
-                good = self.need_to_good[original_name]
+            proper_name = self.needs._prefix_manager.add_prefix(original_name)
+            if self.need_to_good.get(proper_name):
+                good = self.need_to_good[proper_name]
                 price = float(self.goods[good]["cost"])
                 data[column] = data[column].multiply(price)
 
     def inverse(self, data):
         for column in data.columns:
             original_name = column.split(".")[-1]
-            if self.need_to_good.get(original_name):
-                good = self.need_to_good[original_name]
+            proper_name = self.needs._prefix_manager.add_prefix(original_name)
+            if self.need_to_good.get(proper_name):
+                good = self.need_to_good[proper_name]
                 price = float(self.goods[good]["cost"])
                 data[column] = data[column].div(price)
 
