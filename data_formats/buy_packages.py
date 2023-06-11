@@ -66,7 +66,6 @@ class BuyPackages(DataFormat):
             info_dict[key] = self.inverse_json(value)
 
         self.data = DataFormat.copy_dict_with_string_keys_inverse(info_dict, self._prefix_manager)
-        print(self.data)
         self.update_if_needed()
 
         for path, dictionary in self._mod_dictionary.items():

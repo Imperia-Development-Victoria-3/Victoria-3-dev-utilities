@@ -79,7 +79,6 @@ if __name__ == '__main__':
 
     print("\n GAME FILES \n")
     for name, element in building_groups.items():
-        # print(name, element)
         if Test.game_directory in building_groups.data_refs[name]["_source"]:
             print(name, element)
 

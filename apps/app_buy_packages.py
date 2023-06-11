@@ -16,7 +16,7 @@ def get_layout():
     return html.Div([
         html.Div(id="hidden-output", style={"display": "none"}),
         dcc.Store(id='table-selected-prev'),
-        html.Button('Save copy', id='save-button', n_clicks=0),
+        html.Button('Save to mod folder', id='save-button', n_clicks=0),
         html.Button('Normalize', id='normalize-button', n_clicks=0),
         dcc.Checklist(
             options={

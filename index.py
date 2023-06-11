@@ -40,16 +40,16 @@ def get_or_create_data_format(cls):
               Input('url', 'pathname'))
 def display_page(pathname):
     if pathname == '/apps/app_buy_packages.py':
-        # try:
-        load_requirements(app_buy_packages.requirements)
-        # except:
-        #     return dcc.Location(id='url', pathname="")
+        try:
+            load_requirements(app_buy_packages.requirements)
+        except:
+            return dcc.Location(id='url', pathname="")
         return app_buy_packages.get_layout()
     elif pathname == '/apps/app_building_designer.py':
-        # try:
-        load_requirements(app_building_designer.requirements)
-        # except:
-        #     return dcc.Location(id='url', pathname="")
+        try:
+            load_requirements(app_building_designer.requirements)
+        except:
+            return dcc.Location(id='url', pathname="")
         return app_building_designer.get_layout()
     else:
         return app_index_page.get_layout()

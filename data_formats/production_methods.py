@@ -25,7 +25,7 @@ class ProductionMethod:
                 is_additive = split_name[-1] == "add"
                 is_multiplicative = split_name[-1] == "mult"
                 operation = operator.add if is_additive else operator.mul if is_multiplicative else None
-                element_name = "_".join(split_name[1:-1])
+                element_name = "_".join(split_name[2:-1])
 
                 if split_name[split_name_index] == "input":
                     self.input_goods[element_name][operation.__name__] += float(number)
@@ -33,13 +33,12 @@ class ProductionMethod:
                     self.output_goods[element_name][operation.__name__] += float(number)
                 elif split_name[split_name_index] == "employment":
                     self.workforce[element_name][operation.__name__] += float(number)
-
-        if not self._raw_data.get("modifiers"):
+        if not self._raw_data.get("building_modifiers"):
             return
 
-        for modifier_name, modifier_object in self._raw_data["modifiers"].items():
+        for modifier_name, modifier_object in self._raw_data["building_modifiers"].items():
             if modifier_name in ("workforce_scaled", "level_scaled", "unscaled"):
-                handle_modifier(modifier_object, 0)
+                handle_modifier(modifier_object, 1)
 
     def calc_profit(self):
         profit = 0
