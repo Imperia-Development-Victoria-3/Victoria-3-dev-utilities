@@ -18,4 +18,3 @@ class Constants:
 class Test:
     game_directory = os.path.normpath("C:/Program Files (x86)/Steam/steamapps/common/Victoria 3/game")
     mod_directory = os.path.join(Path.home(), os.path.normpath("Documents/Paradox Interactive/Victoria 3/mod/Victoria-3-Dev"))
-    print(mod_directory)

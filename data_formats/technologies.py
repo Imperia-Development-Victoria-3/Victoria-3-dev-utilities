@@ -32,4 +32,3 @@ if __name__ == '__main__':
         if Test.mod_directory in technologies.data_refs[name]["_source"]:
             print(name, element)
 
-    print(technologies.game_folder)

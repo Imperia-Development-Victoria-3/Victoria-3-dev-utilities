@@ -29,7 +29,8 @@ if __name__ == '__main__':
     from data_formats import ProductionMethods
 
     production_methods = ProductionMethods(Test.game_directory, Test.mod_directory)
-    production_method_groups = ProductionMethodGroups(Test.game_directory, Test.mod_directory, link_data=[production_methods])
+    production_method_groups = ProductionMethodGroups(Test.game_directory, Test.mod_directory,
+                                                      link_data=[production_methods])
 
     print("\n GAME FILES \n")
     for name, element in production_method_groups.items():
@@ -40,4 +41,3 @@ if __name__ == '__main__':
     for name, element in production_method_groups.items():
         if Test.mod_directory in production_method_groups.data_refs[name]["_source"]:
             print(name, element)
-

@@ -144,7 +144,7 @@ class DashBuyPackages(BuyPackages):
         super().__init__(game_folder, mod_folder, prefixes)
         self.figure_traces = dict()
 
-    def get_ploty_plot(self, query, plot_type):
+    def get_plotly_plot(self, query, plot_type):
         filtered = self.data_frame.filter(like=query, axis=1)
         if "goods" in query:
             renamed = filtered.rename(columns=lambda x: x.replace('goods.', ''))
@@ -163,14 +163,14 @@ class DashBuyPackages(BuyPackages):
         self.figure_traces = {trace.name: i for i, trace in enumerate(fig["data"])}
         return fig
 
-    def patch_ploty_plot_value(self, cell, patched_figure):
+    def patch_plotly_plot_value(self, cell, patched_figure):
         # if not percentages:
         data = self.data_frame.filter(like=cell["column_id"], axis=1)
         for key, index in self.figure_traces.items():
             if key in cell["column_id"]:
                 patched_figure["data"][index]["y"][cell["row"]] = data.iat[cell["row"], 0]
 
-    def patch_ploty_plot_column(self, column_id, patched_figure):
+    def patch_plotly_plot_column(self, column_id, patched_figure):
         # if not percentages:
         data = self.data_frame.filter(like=column_id, axis=1)
         for key, index in self.figure_traces.items():

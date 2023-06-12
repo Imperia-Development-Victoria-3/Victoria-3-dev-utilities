@@ -51,7 +51,7 @@ def get_layout():
         ),
         html.Br(),
         dcc.Graph(
-            figure=cache.get(DashBuyPackages.__name__).get_ploty_plot("goods.",
+            figure=cache.get(DashBuyPackages.__name__).get_plotly_plot("goods.",
                                                                       "area") if cache.get(
                 DashBuyPackages.__name__) is not None else [],
             id='buy-packages-plot',
@@ -83,7 +83,7 @@ def update_transformations(transforms):
     else:
         cache.get(DashBuyPackages.__name__).apply_transformation(transformation, forward=False)
     return cache.get(DashBuyPackages.__name__).data_frame.to_dict("records"), cache.get(
-        DashBuyPackages.__name__).get_ploty_plot("goods.",
+        DashBuyPackages.__name__).get_plotly_plot("goods.",
                                                  "area")
 
 
@@ -127,7 +127,7 @@ def update_table_type(value):
         raise NotImplementedError(value + " not implemented")
 
     columns = cache.get(DashBuyPackages.__name__).get_table_formatting()
-    figure = cache.get(DashBuyPackages.__name__).get_ploty_plot("goods.", "area")
+    figure = cache.get(DashBuyPackages.__name__).get_plotly_plot("goods.", "area")
 
     return cache.get(DashBuyPackages.__name__).data_frame.to_dict("records"), columns, figure, normalize_button_hidden
 
@@ -151,7 +151,7 @@ def update_buy_packages_plot(data, active_cells, prev_active_cells, selected_col
         if cell:
             value = data[cell["row"]].get(cell["column_id"], None)
             cache.get(DashBuyPackages.__name__).update_value(cell["column_id"], cell["row"], value)
-            cache.get(DashBuyPackages.__name__).patch_ploty_plot_value(cell, patched_figure)
+            cache.get(DashBuyPackages.__name__).patch_plotly_plot_value(cell, patched_figure)
     if selected_columns:
         for column_id in selected_columns:
             new_column = []
@@ -160,7 +160,7 @@ def update_buy_packages_plot(data, active_cells, prev_active_cells, selected_col
                     column_id) == data[row_id].get(column_id) else np.nan
                 new_column.append(new_value)
             cache.get(DashBuyPackages.__name__).update_column(column_id, new_column)
-            cache.get(DashBuyPackages.__name__).patch_ploty_plot_column(column_id, patched_figure)
+            cache.get(DashBuyPackages.__name__).patch_plotly_plot_column(column_id, patched_figure)
     return patched_figure
 
 

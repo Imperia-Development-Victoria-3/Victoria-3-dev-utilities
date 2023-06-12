@@ -2,15 +2,16 @@ from dash import dcc, html, Input, Output, Patch, dash_table, State, callback_co
 from dash.dependencies import Input, Output, MATCH, ALL
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-from data_formats import Technologies, ProductionMethodGroups, ProductionMethods, BuildingGroups, Buildings, Goods, PopNeeds, ProductionMethod
+from data_formats import Technologies, ProductionMethodGroups, ProductionMethods, BuildingGroups, Buildings, Goods
+from data_processors import ProductionMethod, DashBuildings
 import json
 
 from app import app, cache
 
 
 def get_layout():
-    building_list = list(cache.get(Buildings.__name__).keys()) if cache.get(
-        Buildings.__name__) else []
+    building_list = list(cache.get(DashBuildings.__name__).keys()) if cache.get(
+        DashBuildings.__name__) else []
     return html.Div([
         dcc.Dropdown(
             id='building-dropdown',
@@ -18,8 +19,10 @@ def get_layout():
             value=''
         ),
         html.Div(id='method-dropdowns', className='dropdown-container'),
-        html.Div(id="summary")
-
+        html.Div(id="summary"),
+        dcc.Graph(id='building-plot',
+                  figure=cache.get(DashBuildings.__name__).get_plotly_plot("profitability", "building_steel_mills") if cache.get(
+                      DashBuildings.__name__) else [])
         # html.Img(id='building-image', src=''),
         # html.Div(id='profit-score'),
         # html.Div(id='other-scores'),
@@ -27,7 +30,7 @@ def get_layout():
 
 
 requirements = [ProductionMethodGroups, ProductionMethods, BuildingGroups,
-                Buildings, Goods, Technologies]
+                DashBuildings, Goods, Technologies]
 
 
 @app.callback(
@@ -37,15 +40,12 @@ def update_method_dropdowns(selected_building):
     if not selected_building:
         return []
 
-    cache.set("currently_selected_building", cache.get(Buildings.__name__)[selected_building])
-    print(cache.get(Buildings.__name__)[selected_building])
+    cache.set("currently_selected_building", cache.get(DashBuildings.__name__)[selected_building])
     prod_methods = cache.get("currently_selected_building")["production_method_groups"]
     dropdowns = []
     for name, group in prod_methods.items():
-        print(group)
         production_methods = [method for method in group["production_methods"].keys()]
-        production_method = ProductionMethod(production_methods[0], list(group["production_methods"].values())[0],
-                                             cache.get(Goods.__name__))
+        production_method = ProductionMethod(production_methods[0], list(group["production_methods"].values())[0])
         dropdown = html.Div([
             dcc.Dropdown(
                 id={'type': 'dropdown', 'index': name},
