@@ -5,7 +5,8 @@ from data_formats import DataFormat
 class Buildings(DataFormat):
     prefixes = ["building_"]
     relative_file_location = os.path.normpath("common/buildings")
-    data_links = {"BuildingGroups": ["building_group"],
+    data_links = {"Technologies": ["unlocking_technologies"],
+                  "BuildingGroups": ["building_group"],
                   "ProductionMethodGroups": ["production_method_groups"]}
 
     def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None, link_data: list = None):
@@ -23,6 +24,7 @@ class Buildings(DataFormat):
             for external_data in link_data:
                 self.replace_at_path(Buildings.data_links[type(external_data).__name__], external_data)
 
+    # export_paradox:
 
 if __name__ == '__main__':
     import os

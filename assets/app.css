@@ -9,6 +9,15 @@
     flex: 1;
 }
 
+.horizontal-container {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start; /* aligns items to the left */
+    flex-wrap: wrap;
+    padding-top: 10px; /* adds a little padding on top */
+}
+
+
 .row {
     display: flex;
     align-items: center;
