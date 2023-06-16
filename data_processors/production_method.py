@@ -53,14 +53,18 @@ class ProductionMethod:
             employees += operations[operator.add.__name__] * (1 + operations[operator.mul.__name__])
         return employees
 
-    def generate_info_box(self):
+    def generate_info_box(self, building_name, group_name):
         def create_inputs(key, value, category):
             inputs = [html.Span(f'{key}: '),
-                      dcc.Input(id={'type': f'{category}-value-add', 'index': f'{key}-add'}, value=value.get('add', 0),
+                      dcc.Input(id={'type': f'{category}-{key}-add', 'hook': 'info',
+                                    'index': building_name + '-' + group_name + '-' + self.name + '-add'},
+                                value=value.get('add', 0),
                                 type='text')]
             if 'mul' in value:
                 inputs.append(
-                    dcc.Input(id={'type': f'{category}-value-mul', 'index': f'{key}-mul'}, value=value.get('mul', 0),
+                    dcc.Input(id={'type': f'{category}-{key}-mul', 'hook': 'info',
+                                  'index': building_name + '-' + group_name + '-' + self.name + '-mul'},
+                              value=value.get('mul', 0),
                               type='text'))
             return inputs
 
@@ -71,5 +75,4 @@ class ProductionMethod:
             html.Ul([html.Li(create_inputs(key, value, 'output')) for key, value in self.output_goods.items()]),
             html.P('Employees:'),
             html.Ul([html.Li(create_inputs(key, value, 'employee')) for key, value in self.workforce.items()]),
-            html.Button('Save Changes', id={'type': 'save', 'index': self.name}),
         ])

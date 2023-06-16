@@ -61,7 +61,6 @@ class Building:
         else:
             return np.nan
 
-
 class DashBuildings(Buildings):
 
     def __init__(self, game_folder: str, mod_folder: str, prefixes: list = None, link_data: list = None):
@@ -69,8 +68,12 @@ class DashBuildings(Buildings):
         self._buildings = {}
         self.make_elements()
 
+    def reset_building(self, key):
+        self._buildings[key] = Building(self.data[key])
+
     def make_elements(self):
         self._buildings = {name: Building(building) for name, building in self.data.items()}
+
 
     def get_plotly_plot(self, attribute, plot_type="Violin", selected_building: str = "",
                         eras: list = ["1", "2", "3", "4", "5"], commercial_only: bool = True,
@@ -86,8 +89,6 @@ class DashBuildings(Buildings):
                             "unique") and building_object._raw_data.get("expandable",
                                                                         "yes") != "no")) and building_object.era_available(
                         era) and (not commercial_only or building_object.is_commercial())):
-                        if era == "0":
-                            print(building_name)
                         data["Building"].append(building_name)
                         building_object.apply_era(era)
                         data["Profitability"].append(building_object.calc_profitability())

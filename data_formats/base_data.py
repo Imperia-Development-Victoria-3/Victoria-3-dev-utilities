@@ -89,6 +89,7 @@ class DataFormat:
     def update_if_needed(self):
         formatted_game_data = copy.deepcopy(self._game_dictionary)
         formatted_mod_data = copy.deepcopy(self._mod_dictionary)
+        
         for key, value in self.data.items():
             path_string = self.data_refs[key]["_source"]
             if self.game_folder in path_string:
@@ -168,25 +169,6 @@ class DataFormat:
                     yield from search_dict(value.data, new_path, seen)
 
         yield from search_dict({"root": self.data}, [], set())
-
-    # def link(self, external_data, max_depth=3):
-    #     def replace_dict(d, depth_level):
-    #         if depth_level >= max_depth:
-    #             return
-    #         for key, value in d.items():
-    #             if isinstance(value, dict):
-    #                 replace_dict(value, depth_level + 1)
-    #             elif isinstance(value, list):
-    #                 for item in value:
-    #                     if isinstance(item, dict):
-    #                         replace_dict(item, depth_level + 1)
-    #             elif isinstance(value, str) and external_data.get(value):
-    #                 d[key] = {value: external_data[value]}
-    #
-    #             if key in external_data:
-    #                 d[key] = external_data[key]
-    #
-    #     replace_dict(self.data, 0)
 
     def replace_at_path(self, path, external_data, data=None, depth=-1):
         if data is None:
