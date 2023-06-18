@@ -73,6 +73,6 @@ class ProductionMethod:
             html.Ul([html.Li(create_inputs(key, value, 'input')) for key, value in self.input_goods.items()]),
             html.P('Outputs:'),
             html.Ul([html.Li(create_inputs(key, value, 'output')) for key, value in self.output_goods.items()]),
-            html.P('Employees:'),
-            html.Ul([html.Li(create_inputs(key, value, 'employee')) for key, value in self.workforce.items()]),
+            html.P('employments:'),
+            html.Ul([html.Li(create_inputs(key, value, 'employment')) for key, value in self.workforce.items()]),
         ])

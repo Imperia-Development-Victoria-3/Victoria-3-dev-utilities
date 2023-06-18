@@ -2,7 +2,7 @@ import re
 from constants import Constants
 
 symbol_searches = [
-    (r"([\w\.-]+)|(\"[^\n]+\")", Constants.WORD_TYPE),
+    (r"([:\w\.-]+)|(\"[^\n]+\")", Constants.WORD_TYPE),
     (r"=", Constants.EQUAL_TYPE),
     (r"{", Constants.BEGIN_DICT_TYPE),
     (r"}", Constants.END_DICT_TYPE)

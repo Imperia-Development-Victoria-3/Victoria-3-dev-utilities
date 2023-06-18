@@ -1,5 +1,6 @@
 import os
 from data_formats import DataFormat
+from parse_decoder import decode_dictionary
 
 
 class ProductionMethods(DataFormat):
@@ -21,6 +22,16 @@ class ProductionMethods(DataFormat):
         if link_data:
             for external_data in link_data:
                 self.replace_at_path(ProductionMethods.data_links[type(external_data).__name__], external_data)
+
+    def export_paradox(self):
+        self.update_if_needed()
+
+        for path, dictionary in self._mod_dictionary.items():
+            folder_path = os.path.dirname(path)
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path)
+            with open(path, 'w', encoding='utf-8-sig') as file:
+                file.write(decode_dictionary(dictionary))
 
 
 if __name__ == '__main__':

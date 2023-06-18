@@ -73,7 +73,10 @@ requirements = [ProductionMethodGroups, ProductionMethods, BuildingGroups,
     prevent_initial_call=True)
 def save_changes(n_clicks):
     if n_clicks > 0:
-        cache.get(DashBuildings.__name__).export_paradox()
+        for tracked_info in requirements:
+            instance = cache.get(tracked_info.__name__)
+            if hasattr(instance, "export_paradox"):
+                cache.get(tracked_info.__name__).export_paradox()
     return ""
 
 
@@ -139,7 +142,7 @@ def update_database(info_value, info_ids, selected_building, attribute, plot_typ
             production_methods[group_name]["production_methods"][production_method]["building_modifiers"][
                 "workforce_scaled"]["building_" + triggered["type"].replace('-', '_')] = str(info_value[i])
 
-        if triggered["type"].split('-')[0] == "employee" and \
+        if triggered["type"].split('-')[0] == "employment" and \
                 production_methods[group_name]["production_methods"][production_method]["building_modifiers"].get(
                     "level_scaled"):
             production_methods[group_name]["production_methods"][production_method]["building_modifiers"][
@@ -162,14 +165,14 @@ def update_database(info_value, info_ids, selected_building, attribute, plot_typ
      Input({'type': 'input-value-mul', 'index': ALL}, 'value'),
      Input({'type': 'output-value-add', 'index': ALL}, 'value'),
      Input({'type': 'output-value-mul', 'index': ALL}, 'value'),
-     Input({'type': 'employee-value-add', 'index': ALL}, 'value'),
-     Input({'type': 'employee-value-mul', 'index': ALL}, 'value'),
+     Input({'type': 'employment-value-add', 'index': ALL}, 'value'),
+     Input({'type': 'employment-value-mul', 'index': ALL}, 'value'),
      State({'type': 'input-value-add', 'index': ALL}, 'id'),
      State({'type': 'input-value-mul', 'index': ALL}, 'id'),
      State({'type': 'output-value-add', 'index': ALL}, 'id'),
      State({'type': 'output-value-mul', 'index': ALL}, 'id'),
-     State({'type': 'employee-value-add', 'index': ALL}, 'id'),
-     State({'type': 'employee-value-mul', 'index': ALL}, 'id')],
+     State({'type': 'employment-value-add', 'index': ALL}, 'id'),
+     State({'type': 'employment-value-mul', 'index': ALL}, 'id')],
     prevent_initial_call=True)
 def update_summary(input_values_add, input_values_mul, output_values_add, output_values_mul, employee_values_add,
                    employee_values_mul,

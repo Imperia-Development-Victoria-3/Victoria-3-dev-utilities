@@ -32,7 +32,7 @@ class Buildings(DataFormat):
             folder_path = os.path.dirname(path)
             if not os.path.exists(folder_path):
                 os.makedirs(folder_path)
-            with open(path, 'w') as file:
+            with open(path, 'w', encoding='utf-8-sig') as file:
                 file.write(decode_dictionary(dictionary))
 
 

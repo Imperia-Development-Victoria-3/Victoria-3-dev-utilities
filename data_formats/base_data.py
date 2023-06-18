@@ -15,7 +15,7 @@ class DataFormat:
 
         self.game_folder = game_folder
         self.mod_folder = mod_folder
-
+        self.reverse_path = set()
         self._game_dictionary = {}
         self._mod_dictionary = {}
         self.data_refs = {}
@@ -89,8 +89,14 @@ class DataFormat:
     def update_if_needed(self):
         formatted_game_data = copy.deepcopy(self._game_dictionary)
         formatted_mod_data = copy.deepcopy(self._mod_dictionary)
-        
-        for key, value in self.data.items():
+        data = copy.deepcopy(self.data)
+
+        if hasattr(self, "data_links"):
+            for path in self.data_links.values():
+                self.replace_at_path(path, self.reverse_path, data=data, reverse=True)
+                self.replace_at_path(path, self.reverse_path, data=data, reverse=True)
+
+        for key, value in data.items():
             path_string = self.data_refs[key]["_source"]
             if self.game_folder in path_string:
                 if not formatted_game_data.get(path_string):
@@ -170,36 +176,50 @@ class DataFormat:
 
         yield from search_dict({"root": self.data}, [], set())
 
-    def replace_at_path(self, path, external_data, data=None, depth=-1):
+    def replace_at_path(self, path, external_data, data=None, depth=-1, reverse=False):
+        if not reverse:
+            self.reverse_path.update(external_data.keys())
+
         if data is None:
             data = self.data
 
         # If we've reached the maximum depth, replace the value
         if depth == len(path):
-            if isinstance(data, str) and data in external_data:
-                return {data: external_data[data]}
+            if not reverse and isinstance(data, str) and data in external_data:
+                new_dict = external_data[data]
+                new_dict["_name"] = data
+                return new_dict
             elif isinstance(data, dict):
-                for key, _ in data.items():
+                for key, value in data.items():
                     if key in external_data:
-                        data[key] = external_data[key]
+                        if reverse:
+                            data[key] = True
+                        else:
+                            data[key] = external_data[key]
+                return data
+            elif reverse:
                 return data
             else:
                 return {}
 
         # If the current data is a dictionary, look for the key
         if isinstance(data, dict):
+
             if depth == -1:  # Explore every key on the top level
                 for key in data:
-                    self.replace_at_path(path, external_data, data.get(key), depth + 1)
+                    self.replace_at_path(path, external_data, data.get(key), depth + 1, reverse=reverse)
+
             else:  # Follow the path key directly
                 key = path[depth]
-                if key in data:
-                    data[key] = self.replace_at_path(path, external_data, data.get(key), depth + 1)
-
+                if reverse and key in data and isinstance(data[key], dict) and data[key].get("_name"):
+                    if data[key]["_name"] in external_data:
+                        data[key] = data[key]["_name"]
+                elif key in data:
+                    data[key] = self.replace_at_path(path, external_data, data[key], depth + 1, reverse=reverse)
         # If the current data is a list, process each element
         elif isinstance(data, list):
             for i in range(len(data)):
-                data[i] = self.replace_at_path(path, external_data, data[i], depth)
+                data[i] = self.replace_at_path(path, external_data, data[i], depth, reverse=reverse)
 
         return data
 
