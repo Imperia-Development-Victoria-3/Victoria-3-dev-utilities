@@ -49,6 +49,11 @@ class DataFormat:
     @staticmethod
     def add_file_location(dictionary, file_path):
         for key, value in dictionary.items():
+            if isinstance(value, list):
+                print(f"WARNING: you have duplicate entries of {key} in the same file (which is silly) taking the last one")
+                dictionary[key] = value[-1]
+                value = value[-1]
+
             value["_source"] = file_path
 
     @staticmethod

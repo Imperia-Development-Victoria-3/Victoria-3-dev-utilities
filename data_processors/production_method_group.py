@@ -3,11 +3,11 @@ from .production_method import ProductionMethod
 
 class ProductionMethodGroup:
 
-    def __init__(self, raw_data):
+    def __init__(self, name, raw_data):
         self._raw_data = raw_data
         self.production_methods = {}
         self.selected = ""
-
+        self.name = name
         self.interpret()
 
     def select(self, name):
@@ -30,11 +30,27 @@ class ProductionMethodGroup:
             production_method_names.append(name)
 
         values_below_threshold = [(i, val) for i, val in enumerate(eras) if val <= era_number]
+        if not values_below_threshold:
+            print(
+                f"WARNING: you require technologies for a production group {self.name} which is above the building requirements (which is silly), pretending the requirement doesn't exit")
+            values_below_threshold = [(i, val) for i, val in enumerate(eras)]
+
         max_tuple = max(values_below_threshold, key=lambda x: x[1])
         self.selected = production_method_names[max_tuple[0]]
 
     def interpret(self):
-        for name, production_method_dict in self._raw_data["production_methods"].items():
+        for name, production_method_dict in list(self._raw_data["production_methods"].items()):
+            if isinstance(production_method_dict, bool):
+                print(f"WARNING: you failed to define {name} (which is silly), ignoring it for now")
+                del self._raw_data["production_methods"][name]
+                continue
+
+            technologies = production_method_dict.get("unlocking_technologies", {})
+            for tech_name, technology in list(technologies.items()):
+                if isinstance(technology, bool):
+                    print(f"WARNING: you failed to define {tech_name} (which is silly), ignoring it for now")
+                    del self._raw_data["production_methods"][name]["unlocking_technologies"][tech_name]
+
             self.production_methods[name] = ProductionMethod(name, production_method_dict)
         self.selected = list(self._raw_data["production_methods"])[0]
 

@@ -13,8 +13,12 @@ class Building:
         self.interpret()
 
     def interpret(self):
-        for name, production_method_group in self._raw_data["production_method_groups"].items():
-            self.production_method_groups[name] = ProductionMethodGroup(production_method_group)
+        for name, production_method_group in list(self._raw_data["production_method_groups"].items()):
+            if isinstance(production_method_group, bool):
+                print(f"WARNING: you failed to define {name} (which is silly), ignoring it for now")
+                del self._raw_data["production_method_groups"][name]
+                continue
+            self.production_method_groups[name] = ProductionMethodGroup(name, production_method_group)
 
     def era_available(self, era_number):
         era_number = int(era_number.split('_')[-1])

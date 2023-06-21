@@ -58,10 +58,13 @@ def parse_text(file_string):
 
 
 def encode_symbol(symbols, stack, iteration):
-    while symbols[0][3] == Constants.PART_LINE_COMMENT_TYPE or symbols[0][3] == Constants.FULL_LINE_COMMENT_TYPE:
+    while symbols and (symbols[0][3] == Constants.PART_LINE_COMMENT_TYPE or symbols[0][3] == Constants.FULL_LINE_COMMENT_TYPE):
         symbol = symbols.pop(0)
         stack[-1][iteration[0]] = symbol
         iteration[0] += 1
+
+    if not symbols:
+        return
 
     symbol = symbols.pop(0)
     if symbol[3] == Constants.WORD_TYPE:
