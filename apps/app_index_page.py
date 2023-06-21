@@ -45,8 +45,10 @@ def select_folder_path(n_clicks):
     if path:
         path = os.path.normpath(path)
         if path != cache.get("game_directory"):
+            tmp_mod_directory = cache.get("game_mod_directory", path)
             cache.clear()
             cache.set("game_directory", path)
+            cache.set("mod_directory", tmp_mod_directory)
         return f'Selected folder: {path}'
     else:
         return f'Selected folder: {cache.get("game_directory")}'
@@ -66,8 +68,10 @@ def select_folder_path(n_clicks):
     if path:
         path = os.path.normpath(path)
         if path != cache.get("mod_directory"):
+            tmp_game_directory = cache.get("game_directory", path)
             cache.clear()
             cache.set("mod_directory", path)
+            cache.set("game_directory", tmp_game_directory)
             return f'Selected folder: {path}'
         else:
             return f'Selected folder: {cache.get("mod_directory")}'
