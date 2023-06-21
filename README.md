@@ -2,7 +2,7 @@ This is the public repository of Babylon Development focused on providing develo
 
 The tool featured is developed in python and uses dash and plotly to visualise game data as you try and edit it within your browser. 
 
-## It features:
+## Features:
 - A save button which saves changed you made to your mod folder
 - Visualisation of popneeds and building productivity
 - An encoder and decoder which can read and generate the required paradox files
