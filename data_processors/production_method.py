@@ -2,55 +2,89 @@ import operator
 from collections import defaultdict
 from dash import dcc, html
 from app import cache
+import pandas as pd
 
 
 class ProductionMethod:
+    scopes = pd.DataFrame({
+        'ID': [1, 2, 3, 4],
+        'Name': ['building_modifiers', 'state_modifiers', 'country_modifiers', 'timed_modifiers']
+    })
+    scopes_to_id = scopes.set_index('Name')['ID'].to_dict()
+
+    scales = pd.DataFrame({
+        'ID': [1, 2, 3],
+        'Name': ['level_scaled', 'workforce_scaled', 'unscaled'],
+    })
+    scales_to_id = scales.set_index('Name')['ID'].to_dict()
+
+    classifications = pd.DataFrame({
+        'ID': [1, 2, 3],
+        'Name': ['economic', 'military', 'other']
+    })
+    classification_to_id = classifications.set_index('Name')['ID'].to_dict()
+
     def __init__(self, name: str, raw_data: dict):
         self._raw_data = raw_data
         self.name = name
-        self.input_goods = defaultdict(lambda: defaultdict(float))
-        self.output_goods = defaultdict(lambda: defaultdict(float))
-        self.workforce = defaultdict(lambda: defaultdict(float))
-        self.shares = defaultdict(lambda: defaultdict(float))
+        self.data = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
+        self.attributes = []
         self.interpret()
 
     def interpret(self):
-        def handle_modifier(modifier_object, split_name_index):
-            for name, number in modifier_object.items():
-                split_name = name.split("_")
-                is_additive = split_name[-1] == "add"
-                is_multiplicative = split_name[-1] == "mult"
-                operation = operator.add if is_additive else operator.mul if is_multiplicative else None
-                element_name = "_".join(split_name[2:-1])
+        def handle_modifier(modifier_value, scope_name, scale_name, modifier_name):
+            # Skip over keys that are integers (representing comment lines)
+            if isinstance(modifier_name, int):
+                continue
 
-                if split_name[split_name_index] == "input":
-                    self.input_goods[element_name][operation.__name__] += float(number)
-                elif split_name[split_name_index] == "output":
-                    self.output_goods[element_name][operation.__name__] += float(number)
-                elif split_name[split_name_index] == "employment":
-                    self.workforce[element_name][operation.__name__] += float(number)
+            split_name = modifier_name.split("_")
+
+            # Ensure that the item is a modifier
+            if "add" not in split_name:
+                continue
+
+            # Get the operation, scope, and element name
+            operation = operator.add if "add" in split_name else operator.mul if "mult" in split_name else None
+            scope = split_name[0]
+            element_name = "_".join(split_name[2:-1])
+
+            # Map the variable name to the corresponding dictionary
+            if "input" in split_name:
+                data = self.data["input"]
+            elif "output" in split_name:
+                data = self.data["output"]
+            elif "employment" in split_name:
+                data = self.data["workforce"]
+            elif "shares" in split_name:
+                data = self.data["shares"]
+            else:
+                data = self.data["other"]
+
+            # Update the dictionary with the new data
+            data[element_name][operation.__name__] += float(modifier_value)
 
         if not self._raw_data.get("building_modifiers"):
             return
 
-        for modifier_name, modifier_object in self._raw_data["building_modifiers"].items():
-            if modifier_name in ("workforce_scaled", "level_scaled", "unscaled"):
-                handle_modifier(modifier_object, 1)
+        for scope_name, scope_object in self._raw_data.items():
+            for scale_name, scale_object in scope_object.items():
+                for modifier_name, modifier_value in scale_object.items():
+                    handle_modifier(modifier_value, scope_name, scale_name, modifier_name)
 
-    def calc_profit(self):
+    def calc_profit(self, level):
         profit = 0
-        for name, operations in self.input_goods.items():
+        for name, operations in self.data["input"].items():
             price = float(cache.get("Goods")[name]["cost"]) if cache.get("Goods") else 1
-            profit -= price * operations[operator.add.__name__] * (1 + operations[operator.mul.__name__])
-        for name, operations in self.output_goods.items():
+            profit -= price * (operations[operator.add.__name__] + level * operations.get(operator.mul.__name__, 0))
+        for name, operations in self.data["output"].items():
             price = float(cache.get("Goods")[name]["cost"]) if cache.get("Goods") else 1
-            profit += price * operations[operator.add.__name__] * (1 + operations[operator.mul.__name__])
+            profit += price * (operations[operator.add.__name__] + level * operations.get(operator.mul.__name__, 0))
         return profit
 
-    def calc_total_employees(self):
+    def calc_total_employees(self, level):
         employees = 0
-        for name, operations in self.workforce.items():
-            employees += operations[operator.add.__name__] * (1 + operations[operator.mul.__name__])
+        for name, operations in self.data["workforce"].items():
+            employees += (operations[operator.add.__name__] + level * operations.get(operator.mul.__name__, 0))
         return employees
 
     def generate_info_box(self, building_name, group_name):
