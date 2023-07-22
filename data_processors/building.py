@@ -1,8 +1,12 @@
 from .production_method_group import ProductionMethodGroup
+from .production_method import ProductionMethod
 from data_formats import Buildings
 import pandas as pd
 from plotly import graph_objects as go
 import numpy as np
+from app import cache
+import operator
+from collections import defaultdict
 
 
 class Building:
@@ -44,17 +48,56 @@ class Building:
         number = int(era.split('_')[-1])
         for production_method_group in self.production_method_groups.values():
             production_method_group.apply_era(int(number))
+        self.data = self.get_data()
 
-    def calc_profit(self):
-        profit = 0
+    def get_data(self):
+        datapoints = []
         for production_method_group in self.production_method_groups.values():
-            profit += production_method_group.calc_profit()
+            datapoints.append(production_method_group.get_data())
+        return pd.concat(datapoints, axis=0, ignore_index=True)
+
+    def calc_profit(self, level=1):
+        def calculate(data, value_type, operation):
+            result_add = defaultdict(int)
+            result_mult = defaultdict(lambda: 1)
+            data_type = data.loc[(data["ValueType"] == ProductionMethod.value_type_to_id[value_type])]
+            for _, (_, name, value, _, _, _, scale, _) in data_type.loc[data["Operation"] == operation].iterrows():
+                price = float(cache.get("Goods")[name]["cost"]) if cache.get("Goods") else 1
+                if scale != ProductionMethod.scales_to_id["unscaled"]:
+                    result_add[name] += price * value * level
+                else:
+                    result_add[name] += price * value
+            for _, (_, name, value, _, _, _, scale, _) in data_type.loc[data["Operation"] != operation].iterrows():
+                if scale != ProductionMethod.scales_to_id["unscaled"]:
+                    result_mult[name] += value * level
+                else:
+                    result_mult[name] += value
+            total = sum(add_val * result_mult[key] for key, add_val in result_add.items())
+            return total
+
+        data = self.data.loc[self.data['ClassificationID'] == ProductionMethod.classification_to_id["economic"]]
+        total_input_cost = calculate(data, "input", operator.add)
+        total_output_revenue = calculate(data, "output", operator.add)
+        profit = total_output_revenue - total_input_cost
         return profit
 
-    def calc_total_employees(self):
-        total_employees = 0
-        for production_method_group in self.production_method_groups.values():
-            total_employees += production_method_group.calc_total_employees()
+    def calc_total_employees(self, level=1):
+        data = self.data.loc[self.data['ValueType'] == ProductionMethod.value_type_to_id["workforce"]]
+
+        result_add = defaultdict(int)
+        result_mult = defaultdict(lambda: 1)
+        for _, (_, name, value, _, _, _, scale, _) in data.loc[data["Operation"] == operator.add].iterrows():
+            if scale != ProductionMethod.scales_to_id["unscaled"]:
+                result_add[name] += value * level
+            else:
+                result_add[name] += value
+
+        for _, (_, name, value, _, _, _, scale, _) in data.loc[data["Operation"] == operator.mul].iterrows():
+            if scale != ProductionMethod.scales_to_id["unscaled"]:
+                result_mult[name] += value * level
+            else:
+                result_mult[name] += value
+        total_employees = sum(add_val * result_mult[key] for key, add_val in result_add.items())
         return total_employees
 
     def calc_profitability(self):
@@ -64,6 +107,7 @@ class Building:
             return profit / employees
         else:
             return np.nan
+
 
 class DashBuildings(Buildings):
 
@@ -77,7 +121,6 @@ class DashBuildings(Buildings):
 
     def make_elements(self):
         self._buildings = {name: Building(building) for name, building in self.data.items()}
-
 
     def get_plotly_plot(self, attribute, plot_type="Violin", selected_building: str = "",
                         eras: list = ["1", "2", "3", "4", "5"], commercial_only: bool = True,
@@ -97,12 +140,13 @@ class DashBuildings(Buildings):
                         building_object.apply_era(era)
                         data["Profitability"].append(building_object.calc_profitability())
                     if building_name == selected_building and plot_type == "Violin" and building_object.era_available(
-                        era):
+                            era):
                         if plot_type == "Violin":
                             building_object.apply_era(era)
                             selected_data[era] = {building_name: building_object.calc_profitability()}
-                        elif plot_type == "Bar" and not data["Building"] == selected_building and building_object.era_available(
-                        era):
+                        elif plot_type == "Bar" and not data[
+                                                            "Building"] == selected_building and building_object.era_available(
+                            era):
                             data["Building"].append(building_name)
                             building_object.apply_era(era)
                             data["Profitability"].append(building_object.calc_profitability())

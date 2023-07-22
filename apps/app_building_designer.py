@@ -63,8 +63,8 @@ def get_layout():
     ])
 
 
-requirements = [ProductionMethodGroups, ProductionMethods, BuildingGroups,
-                DashBuildings, Goods, Technologies]
+requirements = [Goods, ProductionMethodGroups, ProductionMethods, BuildingGroups,
+                DashBuildings, Technologies]
 
 
 @app.callback(
