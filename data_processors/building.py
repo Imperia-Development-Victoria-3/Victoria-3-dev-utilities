@@ -8,6 +8,9 @@ from app import cache
 import operator
 from collections import defaultdict
 
+from dash import dcc, html
+import dash_bootstrap_components as dbc
+
 
 class Building:
 
@@ -53,21 +56,63 @@ class Building:
     def get_data(self):
         datapoints = []
         for production_method_group in self.production_method_groups.values():
-            datapoints.append(production_method_group.get_data())
-        return pd.concat(datapoints, axis=0, ignore_index=True)
+            datapoints += production_method_group.get_data()
+
+        # Detects duplicate entries
+        mergers = {}
+        for i, datapoint_1 in enumerate(datapoints):
+            for j in range(i + 1, len(datapoints)):
+                datapoint_2 = datapoints[j]
+                for key in datapoint_1.keys():
+                    if not key == "Value" and not key == "Name":
+                        if datapoint_1[key] != datapoint_2[key]:
+                            break
+                else:
+                    if not mergers.get(j):
+                        mergers[j] = i
+
+        # Combine the duplicate entries by adding them together
+        new_datapoints = {}
+        for i, datapoint in enumerate(datapoints):
+            index = mergers.get(i)
+            if index:
+                new_datapoints[index]["Value"] += datapoint["Value"]
+            else:
+                new_datapoints[i] = datapoints[i].copy()
+
+        datapoints = list(new_datapoints.values())
+        return datapoints
+
+    @staticmethod
+    def find_in_list_of_dicts(data, conditions):
+        new_data = []
+        for element in data:
+            for key, value in conditions.items():
+                if element[key] != value:
+                    break
+            else:
+                new_data.append(element)
+        return new_data
 
     def calc_profit(self, level=1):
-        def calculate(data, value_type, operation):
+        def calculate(data, value_type):
+            # print(data)
             result_add = defaultdict(int)
             result_mult = defaultdict(lambda: 1)
-            data_type = data.loc[(data["ValueType"] == ProductionMethod.value_type_to_id[value_type])]
-            for _, (_, name, value, _, _, _, scale, _) in data_type.loc[data["Operation"] == operation].iterrows():
+
+            data_type = Building.find_in_list_of_dicts(data,
+                                                       {"ValueType": ProductionMethod.value_type_to_id[value_type]})
+            for row in Building.find_in_list_of_dicts(data_type, {"Operation": operator.add.__name__}):
+                name, value, scale = row["Name"], row["Value"], row["ScaleID"]
+
                 price = float(cache.get("Goods")[name]["cost"]) if cache.get("Goods") else 1
                 if scale != ProductionMethod.scales_to_id["unscaled"]:
                     result_add[name] += price * value * level
                 else:
                     result_add[name] += price * value
-            for _, (_, name, value, _, _, _, scale, _) in data_type.loc[data["Operation"] != operation].iterrows():
+            for row in Building.find_in_list_of_dicts(data_type, {"Operation": operator.mul.__name__}):
+                name, value, scale = row["Name"], row["Value"], row["ScaleID"]
+
                 if scale != ProductionMethod.scales_to_id["unscaled"]:
                     result_mult[name] += value * level
                 else:
@@ -75,24 +120,26 @@ class Building:
             total = sum(add_val * result_mult[key] for key, add_val in result_add.items())
             return total
 
-        data = self.data.loc[self.data['ClassificationID'] == ProductionMethod.classification_to_id["economic"]]
-        total_input_cost = calculate(data, "input", operator.add)
-        total_output_revenue = calculate(data, "output", operator.add)
+        data = Building.find_in_list_of_dicts(self.data,
+                                              {'ClassificationID': ProductionMethod.classification_to_id["economic"]})
+        total_input_cost = calculate(data, "input")
+        total_output_revenue = calculate(data, "output")
         profit = total_output_revenue - total_input_cost
         return profit
 
     def calc_total_employees(self, level=1):
-        data = self.data.loc[self.data['ValueType'] == ProductionMethod.value_type_to_id["workforce"]]
-
+        data = Building.find_in_list_of_dicts(self.data, {"ValueType": ProductionMethod.value_type_to_id["workforce"]})
         result_add = defaultdict(int)
         result_mult = defaultdict(lambda: 1)
-        for _, (_, name, value, _, _, _, scale, _) in data.loc[data["Operation"] == operator.add].iterrows():
+        for row in Building.find_in_list_of_dicts(data, {"Operation": operator.add.__name__}):
+            name, value, scale = row["Name"], row["Value"], row["ScaleID"]
             if scale != ProductionMethod.scales_to_id["unscaled"]:
                 result_add[name] += value * level
             else:
                 result_add[name] += value
 
-        for _, (_, name, value, _, _, _, scale, _) in data.loc[data["Operation"] == operator.mul].iterrows():
+        for row in Building.find_in_list_of_dicts(data, {"Operation": operator.mul.__name__}):
+            name, value, scale = row["Name"], row["Value"], row["ScaleID"]
             if scale != ProductionMethod.scales_to_id["unscaled"]:
                 result_mult[name] += value * level
             else:
@@ -107,6 +154,78 @@ class Building:
             return profit / employees
         else:
             return np.nan
+
+    @staticmethod
+    def get_unique_values(data, keys):
+        unique_values = {key: set() for key in keys}
+
+        for entry in data:
+            for key in keys:
+                unique_values[key].add(entry[key])
+
+        return unique_values
+
+    def get_summary(self, production_methods):
+        tabs = []
+
+        for production_method_group, production_method in production_methods.items():
+            self.production_method_groups[production_method_group].select(production_method)
+        self.data = self.get_data()
+        unique_values = Building.get_unique_values(self.data, ["ScopeID"])
+
+        for scope_id in unique_values["ScopeID"]:
+            scope_data = Building.find_in_list_of_dicts(self.data, {"ScopeID": scope_id})
+
+            scales = []
+            unique_scale_values = Building.get_unique_values(scope_data, ["ScaleID"])
+
+            for scale_id in unique_scale_values["ScaleID"]:
+                scale_data = Building.find_in_list_of_dicts(scope_data, {"ValueType": scale_id})
+                modifiers = []
+
+                unique_values = Building.get_unique_values(scale_data, ["ValueType"])
+
+                for value_id in unique_values["ValueType"]:
+                    value_data = Building.find_in_list_of_dicts(scale_data, {"ValueType": value_id})
+
+                    add_data = Building.find_in_list_of_dicts(value_data, {"Operation": operator.add.__name__})
+                    mul_data = Building.find_in_list_of_dicts(value_data, {"Operation": operator.mul.__name__})
+
+                    for item in mul_data:
+                        thing = Building.find_in_list_of_dicts(add_data, {"ID": item["ID"]})
+                        if thing:
+                            thing[0]["Value"] *= item["Value"]
+
+                    # Assuming you want to create a column for each ValueType
+                    for item in add_data:
+                        name = item["Name"]
+                        value = item["Value"]
+                        result_value = value
+                        modifiers.append(
+                            html.Div([
+                                html.Span(f'{name}: {result_value}')
+                            ])
+                        )
+
+                    scales.append(
+                        html.Div([
+                            html.Button(f'{ProductionMethod.id_to_scales[scale_id]}',
+                                        id={'type': 'scale-button', 'index': f'{scope_id}-{scale_id}-{value_id}'},
+                                        className='expand-button'),
+                            dbc.Collapse(
+                                children=modifiers,
+                                id={'type': 'scale-collapse', 'index': f'{scope_id}-{scale_id}-{value_id}'},
+                                is_open=True
+                            )
+                        ])
+                    )
+
+            tabs.append(dcc.Tab(
+                label=ProductionMethod.id_to_scopes[scope_id],
+                children=scales
+            ))
+
+        return dcc.Tabs(tabs)
 
 
 class DashBuildings(Buildings):
@@ -127,11 +246,12 @@ class DashBuildings(Buildings):
                         no_unique_buildings: bool = True):
         traces = []  # Holds the plot data for all eras
         selected_data = {}
+
+        eras = sorted(eras, key=lambda x: int(x.split("_")[-1]))
         for era in eras:
             if "profitability" == attribute:
                 data = {"Building": [], "Profitability": []}
                 for building_name, building_object in self._buildings.items():
-
                     if ((not no_unique_buildings or (not building_object._raw_data.get(
                             "unique") and building_object._raw_data.get("expandable",
                                                                         "yes") != "no")) and building_object.era_available(
@@ -174,8 +294,7 @@ class DashBuildings(Buildings):
         if plot_type == "Violin" and selected_building:
             for i, era in enumerate(eras):
                 if selected_data.get(str(i)):
-                    value = \
-                        [value for value in selected_data[str(i)].values()][0]
+                    value = [value for value in selected_data[str(i)].values()][0]
                     fig.add_shape(
                         type="line",
                         x0=i - 0.45,  # Adjust these values as necessary to match your plot's scale

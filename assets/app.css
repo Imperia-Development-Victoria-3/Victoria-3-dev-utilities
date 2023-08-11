@@ -30,3 +30,16 @@
     flex-basis: 33%;
     text-align: center;
 }
+
+
+/* Style the dropdown button */
+.expand-button {
+  background-color: #4CAF50;
+  color: white;
+  padding: 6px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+}
+
+
