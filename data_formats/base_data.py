@@ -240,6 +240,9 @@ class DataFormat:
     def __contains__(self, key):
         return self._prefix_manager.add_prefix(key) in self.data
 
+    def __len__(self):
+        return len(self.data)
+
     def get(self, key):
         return self.data.get(self._prefix_manager.add_prefix(key))
 

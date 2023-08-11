@@ -54,8 +54,5 @@ class ProductionMethodGroup:
             self.production_methods[name] = ProductionMethod(name, production_method_dict)
         self.selected = list(self._raw_data["production_methods"])[0]
 
-    def calc_profit(self):
-        return self.production_methods[self.selected].calc_profit()
-
-    def calc_total_employees(self):
-        return self.production_methods[self.selected].calc_total_employees()
+    def get_data(self):
+        return self.production_methods[self.selected].get_data()
