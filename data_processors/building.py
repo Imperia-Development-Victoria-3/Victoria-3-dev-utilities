@@ -32,7 +32,7 @@ class Building:
         min_era = -1
         technologies = self._raw_data.get("unlocking_technologies", {})
         for technology in technologies.values():
-            era = int(technology["era"].split('_')[-1])
+            era = int(technology["era"]["_name"].split('_')[-1])
             if min_era < era:
                 min_era = era
 
