@@ -35,7 +35,6 @@ class Technologies(DataFormat):
     def calc_category_cost(self):
         # Extracting all unique categories
         unique_categories = set([d["category"] for d in self.data.values()])
-        print(unique_categories)
         # Calculating total tech cost for each category
         category_costs = {}
         for category in unique_categories:

@@ -47,6 +47,12 @@ class Building:
             is_commercial |= production_method_group.is_commercial()
         return is_commercial
 
+    def is_military(self):
+        is_military = False
+        for production_method_group in self.production_method_groups.values():
+            is_military |= production_method_group.is_military()
+        return is_military
+
     def apply_era(self, era):
         number = int(era.split('_')[-1])
         for production_method_group in self.production_method_groups.values():
@@ -154,6 +160,28 @@ class Building:
             return profit / employees
         else:
             return np.nan
+
+    def calc_offense(self, level=1):
+        data = Building.find_in_list_of_dicts(self.data,
+                                              {"ClassificationID": ProductionMethod.classification_to_id["military"]})
+        data = [datapoint for datapoint in data if "offense" in datapoint["ID"]]
+        result_add = defaultdict(int)
+        result_mult = defaultdict(lambda: 1)
+        for row in Building.find_in_list_of_dicts(data, {"Operation": operator.add.__name__}):
+            name, value, scale = row["Name"], row["Value"], row["ScaleID"]
+            if scale != ProductionMethod.scales_to_id["unscaled"]:
+                result_add[name] += value * level
+            else:
+                result_add[name] += value
+
+        for row in Building.find_in_list_of_dicts(data, {"Operation": operator.mul.__name__}):
+            name, value, scale = row["Name"], row["Value"], row["ScaleID"]
+            if scale != ProductionMethod.scales_to_id["unscaled"]:
+                result_mult[name] += value * level
+            else:
+                result_mult[name] += value
+        total_offense = sum(add_val * result_mult[key] for key, add_val in result_add.items())
+        return total_offense
 
     @staticmethod
     def get_unique_values(data, keys):
@@ -284,6 +312,47 @@ class DashBuildings(Buildings):
                     # Create violin plot for all profitability data
                     trace_all = go.Violin(
                         y=dataframe['Profitability'],
+                        name=f"All Buildings Era {era}",
+                        meanline_visible=True,
+                        fillcolor='gray',
+                    )
+                    traces.append(trace_all)
+            if "offense" == attribute:
+                data = {"Building": [], "Offense": []}
+                for building_name, building_object in self._buildings.items():
+                    if ((not no_unique_buildings or (not building_object._raw_data.get("unique")
+                                                     and building_object._raw_data.get("expandable", "yes") != "no"))
+                            and building_object.era_available(era)
+                            and not building_object.is_commercial()
+                            and building_object.is_military()):
+                        data["Building"].append(building_name)
+                        building_object.apply_era(era)
+                        data["Offense"].append(building_object.calc_offense())
+                    if building_name == selected_building and plot_type == "Violin" and building_object.era_available(
+                            era):
+                        if plot_type == "Violin":
+                            building_object.apply_era(era)
+                            selected_data[era] = {building_name: building_object.calc_offense()}
+                        elif plot_type == "Bar" and not data[
+                                                            "Building"] == selected_building and building_object.era_available(
+                            era):
+                            data["Building"].append(building_name)
+                            building_object.apply_era(era)
+                            data["Offense"].append(building_object.calc_offense())
+
+                dataframe = pd.DataFrame(data)
+                dataframe = dataframe.sort_values(by='Offense')  # Sort dataframe by 'Profitability'
+                if plot_type == "Bar":
+                    colors = ['blue' if bld == selected_building else 'gray' for bld in dataframe['Building']]
+                    dataframe = dataframe.sort_values(by='Offense')
+                    traces.append(
+                        go.Bar(name=f'Era {era} Buildings', x=dataframe['Building'], y=dataframe['Offense'],
+                               marker_color=colors))
+
+                elif plot_type == "Violin":
+                    # Create violin plot for all profitability data
+                    trace_all = go.Violin(
+                        y=dataframe['Offense'],
                         name=f"All Buildings Era {era}",
                         meanline_visible=True,
                         fillcolor='gray',

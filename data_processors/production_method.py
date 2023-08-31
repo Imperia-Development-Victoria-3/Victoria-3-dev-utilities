@@ -71,7 +71,7 @@ class ProductionMethod:
                 element_name = "_".join(split_name[1:-2])
 
             classification = 0
-            if any(ProductionMethod.classification_military_keywords) in split_name:
+            if any(keyword in split_name for keyword in ProductionMethod.classification_military_keywords):
                 classification = 2
             elif cache.get("Goods") and cache.get("Goods").get(element_name):
                 classification = 1
@@ -91,6 +91,12 @@ class ProductionMethod:
                     for modifier_name, modifier_value in scale_object.items():
                         handle_modifier(tmp_data, modifier_value, scope_name, scale_name, modifier_name)
         self.data = tmp_data
+
+    def is_military(self):
+        for datapoint in self.data:
+            if datapoint["ClassificationID"] == ProductionMethod.classification_to_id["military"]:
+                return True
+        return False
 
     def get_data(self):
         return self.data

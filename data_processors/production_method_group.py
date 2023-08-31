@@ -16,6 +16,12 @@ class ProductionMethodGroup:
     def is_commercial(self):
         return self._raw_data.get("ai_selection", "most_profitable") == "most_profitable"
 
+    def is_military(self):
+        is_military = False
+        for production_method in self.production_methods.values():
+            is_military |= production_method.is_military()
+        return is_military
+
     def apply_era(self, era_number):
         eras = []
         production_method_names = []

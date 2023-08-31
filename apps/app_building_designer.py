@@ -30,6 +30,7 @@ def get_layout():
             id='attribute-dropdown',
             options=[
                 {'label': 'Profitability', 'value': 'profitability'},
+                {'label': 'offense', 'value': 'offense'},
             ],
             value='profitability',
             placeholder='Select an attribute...'
