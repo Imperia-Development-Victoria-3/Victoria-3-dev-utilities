@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+from copy import deepcopy
 
 
 class Constants:
@@ -12,9 +13,37 @@ class Constants:
     FULL_LINE_COMMENT_TYPE = 5
     ALL_COMMENT_TYPE = 6
 
-    # PATHS
-
 
 class Test:
     game_directory = os.path.normpath("C:/Program Files (x86)/Steam/steamapps/common/Victoria 3/game")
-    mod_directory = os.path.join(Path.home(), os.path.normpath("Documents/Paradox Interactive/Victoria 3/mod/Victoria-3-Dev"))
+    mod_directory = os.path.join(Path.home(),
+                                 os.path.normpath("Documents/Paradox Interactive/Victoria 3/mod/Victoria-3-Dev"))
+
+
+def update_and_return(d, update_dict):
+    new_dict = deepcopy(d)
+    new_dict.update(update_dict)
+    return new_dict
+
+
+class BuildingDesignerConstants:
+    FILTER_TYPES = {
+        "commercial"
+        "military"
+        "unique"
+        "expandable"
+    }
+
+    BASE_CONFIG = {
+        "unique": False,
+        "expandable": True
+    }
+
+    ECONOMICS_CONFIG = update_and_return(BASE_CONFIG, {
+        "commercial": True,
+        "military": False
+    })
+
+    MILITARY_CONFIG = update_and_return(BASE_CONFIG, {
+        "military": True
+    })

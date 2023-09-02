@@ -25,7 +25,7 @@ class ProductionMethod:
         'ID': [0, 1, 2],
         'Name': ['other', 'economic', 'military']
     })
-    classification_military_keywords = ["unit", "army", "offense", "defense"]
+    classification_military_keywords = ["unit", "army", "navy", "offense", "defense", "morale"]
     classification_to_id = classifications.set_index('Name')['ID'].to_dict()
 
     value_type = pd.DataFrame({
