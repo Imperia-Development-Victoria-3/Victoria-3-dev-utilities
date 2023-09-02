@@ -1,12 +1,13 @@
 from pprint import pprint
 
-from dash import dcc, html, Input, Output, Patch, dash_table, State, callback_context
+from dash import dcc, html, Input, Output, Patch, dash_table, State, callback_context, no_update
 from dash.dependencies import Input, Output, MATCH, ALL
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from data_formats import Technologies, ProductionMethodGroups, ProductionMethods, BuildingGroups, Goods, Eras
-from data_processors import ProductionMethod, DashBuildings
+from data_processors import ProductionMethod, DashBuildings, Building
 import json
+import copy
 from plotly import graph_objects as go
 
 from app import app, cache
@@ -17,6 +18,11 @@ def get_layout():
         DashBuildings.__name__) else []
     era_list = list(cache.get(Eras.__name__).keys()) if cache.get(
         Eras.__name__) else []
+    filter_options = [{'label': name.capitalize(), 'value': name} for name in Building.FILTER_FUNCTIONS.keys()]
+    attribute_options = [{'label': name.capitalize(), 'value': name} for name in Building.ATTRIBUTE_FUNCTIONS.keys()]
+    attribute_start_value = attribute_options[0]["value"] if attribute_options else []
+    attribute_config = Building.ATTRIBUTE_FUNCTIONS[attribute_start_value]
+
     return html.Div([
         html.Button('Save Changes', id="save"),
         html.Div(id="hidden-output-building", style={"display": "none"}),
@@ -28,10 +34,8 @@ def get_layout():
         html.Div(id='method-dropdowns', className='dropdown-container'),
         html.Div(id="summary"), dcc.Dropdown(
             id='attribute-dropdown',
-            options=[
-                {'label': 'Profitability', 'value': 'profitability'},
-            ],
-            value='profitability',
+            options=attribute_options,
+            value=attribute_start_value,
             placeholder='Select an attribute...'
         ),
         html.Div([
@@ -53,16 +57,13 @@ def get_layout():
             ),
             dcc.Checklist(
                 id='building-filter-options',
-                options=[
-                    {'label': 'Commercial Buildings Only', 'value': 'commercial_only'},
-                    {'label': 'Exclude Unique Buildings', 'value': 'no_unique_buildings'},
-                ],
-                value=['commercial_only', 'no_unique_buildings'],
+                options=filter_options,
+                value=[name for name, is_enabled in attribute_config["config"].items() if is_enabled],
             )], className='horizontal-container'
         ),
         dcc.Graph(id='building-plot',
-                  figure=cache.get(DashBuildings.__name__).get_plotly_plot("profitability",
-                                                                           selected_building="building_steel_mills",
+                  figure=cache.get(DashBuildings.__name__).get_plotly_plot(attribute_start_value, attribute_config,
+                                                                           selected_building="",
                                                                            eras=era_list) if cache.get(
                       DashBuildings.__name__) else [])
     ])
@@ -151,11 +152,10 @@ def update_database(info_value, selected_building, attribute, plot_type, eras, b
 
     if building_name and cache.get(DashBuildings.__name__):
         cache.get(DashBuildings.__name__).reset_building(building_name)
-        commercial_only = 'commercial_only' in building_filter_options
-        no_unique_buildings = 'no_unique_buildings' in building_filter_options
-
+        attribute_config = Building.ATTRIBUTE_FUNCTIONS[attribute]
+        attribute_config["config"].update({name: True for name in building_filter_options})
         return cache.get(DashBuildings.__name__).get_plotly_plot(
-            attribute, plot_type, selected_building, eras, commercial_only, no_unique_buildings
+            attribute, attribute_config, plot_type, selected_building, eras
         )
     return go.Figure()
 
@@ -178,7 +178,8 @@ def update_database(info_value, selected_building, attribute, plot_type, eras, b
 
 
 @app.callback(
-    Output('building-plot', 'figure', allow_duplicate=True),
+    Output('building-plot', 'figure'),
+    Output('building-filter-options', 'value'),
     Input('building-dropdown', 'value'),
     Input('attribute-dropdown', 'value'),
     Input('plot-type-dropdown', 'value'),
@@ -187,14 +188,21 @@ def update_database(info_value, selected_building, attribute, plot_type, eras, b
     prevent_initial_call=True
 )
 def update_figure(selected_building, attribute, plot_type, eras, building_filter_options):
-    commercial_only = 'commercial_only' in building_filter_options
-    no_unique_buildings = 'no_unique_buildings' in building_filter_options
+    triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0] if callback_context.triggered else None
+
+    filter_value = no_update
+    if triggered_id == 'attribute-dropdown':
+        attribute_config = Building.ATTRIBUTE_FUNCTIONS[attribute]
+        filter_value = [name for name, is_enabled in attribute_config["config"].items() if is_enabled]
+        building_filter_options = filter_value
 
     if cache.get(DashBuildings.__name__):
+        attribute_config = copy.deepcopy(Building.ATTRIBUTE_FUNCTIONS[attribute])
+        attribute_config["config"].update({name: True for name in building_filter_options})
         return cache.get(DashBuildings.__name__).get_plotly_plot(
-            attribute, plot_type, selected_building, eras, commercial_only, no_unique_buildings
-        )
-    return go.Figure()
+            attribute, attribute_config, plot_type, selected_building, eras
+        ), filter_value
+    return go.Figure(), filter_value
 
 
 @app.callback(

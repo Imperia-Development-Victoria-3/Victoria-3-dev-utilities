@@ -16,6 +16,12 @@ class ProductionMethodGroup:
     def is_commercial(self):
         return self._raw_data.get("ai_selection", "most_profitable") == "most_profitable"
 
+    def is_military(self):
+        is_military = False
+        for production_method in self.production_methods.values():
+            is_military |= production_method.is_military()
+        return is_military
+
     def apply_era(self, era_number):
         eras = []
         production_method_names = []
@@ -23,7 +29,7 @@ class ProductionMethodGroup:
             min_era = 0
             technologies = production_method.get("unlocking_technologies", {})
             for technology in technologies.values():
-                era = int(technology["era"].split('_')[-1])
+                era = int(technology["era"]["_name"].split('_')[-1])
                 if min_era <= era:
                     min_era = era
             eras.append(min_era)
