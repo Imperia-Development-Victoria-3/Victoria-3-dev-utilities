@@ -17,32 +17,92 @@ def get_layout():
         if type(transforms) == PriceCompensation:
             is_price_adjusted = True
     return html.Div([
+        # Hidden Div
         html.Div(id="hidden-output", style={"display": "none"}),
+
+        # Data Store
         dcc.Store(id='table-selected-prev'),
-        html.Button('Save to mod folder', id='save-button', n_clicks=0),
-        html.Button('Normalize', id='normalize-button', hidden=True, n_clicks=0),
-        dcc.Checklist(
-            options={
-                'price': 'Apply Price Adjustment',
-            },
-            value=['price'] if is_price_adjusted else [],
-            id="transform options"
-        ),
-        dcc.RadioItems(['Percentage', 'Absolute'], 'Percentage' if is_percentage else 'Absolute',
-                       id='table-number-type'),
-        dcc.Input(id='input-box', type='number', value=0),
-        html.Button('Add', id='button-add'),
-        html.Button('Multiply', id='button-mult'),
-        html.Button('Linear Interpolation Between two selected points', id='linear-button', n_clicks=0),
-        html.Button('Exponential Interpolation Between two selected points', id='exponential-button',
-                    n_clicks=0),
-        dcc.Checklist(
-            options={
-                'handle_zeros': 'Apply to 0 values in table',
-            },
-            value=[],
-            id="user-options"
-        ),
+
+        # Action Buttons
+        html.Div([
+            html.Button('Save to mod folder', id='save-button', n_clicks=0),
+            html.Button('Normalize', id='normalize-button', hidden=True, n_clicks=0),
+        ], style={'margin-bottom': '10px'}),
+
+        # Tabs
+        dcc.Tabs(id='tabs', value='tab-1', children=[
+            dcc.Tab(label='View Options', value='tab-1', children=[
+                html.Div([
+                    html.Div([
+                        html.Label('Transform Options:', style={'color': 'blue', 'font-weight': 'bold'}),
+                        dcc.Checklist(
+                            options=[{'label': 'Apply Price Adjustment', 'value': 'price'}],
+                            value=['price'] if is_price_adjusted else [],
+                            id="transform-options"
+                        ),
+                    ], style={'display': 'inline-block', 'margin-right': '20px', 'vertical-align': 'top'}),
+
+                    html.Div([
+                        html.Label('Number Type:', style={'color': 'blue', 'font-weight': 'bold'}),
+                        dcc.RadioItems(
+                            options=[{'label': 'Percentage', 'value': 'Percentage'},
+                                     {'label': 'Absolute', 'value': 'Absolute'}],
+                            value='Percentage' if is_percentage else 'Absolute',
+                            id='table-number-type'
+                        ),
+                    ], style={'display': 'inline-block', 'vertical-align': 'top'}),
+
+                    html.Div([
+                        html.Label('Table Height (in pixels)', style={'color': 'purple', 'font-weight': 'bold'}),
+                        dcc.Slider(
+                            id='table-height-slider',
+                            min=0,
+                            max=1200,
+                            value=300,
+                            # marks={i: str(i) for i in range(0, 801, 100)},
+                        ),
+                    ], style={'margin-top': '20px'}),
+
+                    html.Div([
+                        html.Label('Plot Height (in pixels)', style={'color': 'purple', 'font-weight': 'bold'}),
+                        dcc.Slider(
+                            id='plot-height-slider',
+                            min=0,
+                            max=1200,
+                            value=700,
+                            # marks={i: str(i) for i in range(0, 801, 100)},
+                        ),
+                    ], style={'margin-top': '20px'}),
+                ]),
+            ]),
+            dcc.Tab(label='Edit Tools', value='tab-2', children=[
+                html.Div([
+                    html.Div([
+                        html.Label('Mass Operations to all selected cells',
+                                   style={'color': 'green', 'font-weight': 'bold'}),
+                        html.Div([
+                            dcc.Input(id='input-box', type='number', value=0),
+                            html.Button('Add', id='button-add'),
+                            html.Button('Multiply', id='button-mult'),
+                            dcc.Checklist(
+                                options=[{'label': 'Apply to 0 values in table', 'value': 'handle_zeros'}],
+                                value=[],
+                                id="user-options"
+                            ),
+                        ])
+                    ], style={'display': 'inline-block', 'margin-right': '50px', 'vertical-align': 'top'}),
+
+                    html.Div([
+                        html.Label('Interpolation between top and bottom selected cells',
+                                   style={'color': 'green', 'font-weight': 'bold'}),
+                        html.Div([
+                            html.Button('Linear', id='linear-button', n_clicks=0),
+                            html.Button('Exponential', id='exponential-button', n_clicks=0),
+                        ])
+                    ], style={'display': 'inline-block', 'vertical-align': 'top'}),
+                ])
+            ])
+        ]),
         dash_table.DataTable(
             id='editable-table',
             columns=cache.get(DashBuyPackages.__name__).get_table_formatting() if cache.get(
@@ -133,6 +193,25 @@ def update_linear_fill(n_clicks, active_cells, data):
 def update_exponential_fill(n_clicks, active_cells, data):
     patch = Patch()
     return update_table_fill(n_clicks, active_cells, data, patch, exponential_fill)
+
+
+@app.callback(
+    Output('editable-table', 'style_table'),
+    Input('table-height-slider', 'value')
+)
+def update_table_height(value):
+    patch = Patch()
+    patch['height'] = f'{value}px'
+    return patch
+
+@app.callback(
+    Output('buy-packages-plot', 'style'),
+    Input('plot-height-slider', 'value')
+)
+def update_plot_height(value):
+    patch = Patch()
+    patch['height'] = f'{value}px'
+    return patch
 
 
 @app.callback(
