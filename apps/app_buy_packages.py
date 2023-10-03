@@ -1,5 +1,8 @@
+from collections import defaultdict
+
 from dash import dcc, html, Input, Output, Patch, dash_table, State, callback_context
-from data_utils import TransformNoInverse, Percentage, PriceCompensation
+from data_utils import TransformNoInverse, Percentage, PriceCompensation, update_table_fill, linear_fill, \
+    exponential_fill
 from dash.exceptions import PreventUpdate
 from data_formats import DashBuyPackages, Goods, PopNeeds
 import numpy as np
@@ -27,10 +30,12 @@ def get_layout():
         ),
         dcc.RadioItems(['Percentage', 'Absolute'], 'Percentage' if is_percentage else 'Absolute',
                        id='table-number-type'),
-        html.Br(),
         dcc.Input(id='input-box', type='number', value=0),
         html.Button('Add', id='button-add'),
         html.Button('Multiply', id='button-mult'),
+        html.Button('Linear Interpolation Between two selected points', id='linear-button', n_clicks=0),
+        html.Button('Exponential Interpolation Between two selected points', id='exponential-button',
+                    n_clicks=0),
         dcc.Checklist(
             options={
                 'handle_zeros': 'Apply to 0 values in table',
@@ -45,14 +50,14 @@ def get_layout():
             data=cache.get(DashBuyPackages.__name__).data_frame.to_dict("records") if cache.get(
                 DashBuyPackages.__name__) is not None else [],
             editable=True,
-            style_table={'height': '200px', 'overflowY': 'auto'},
+            style_table={'height': '300px', 'resize': 'both', 'overflowY': 'auto'},
             column_selectable="multi",  # allows selecting multiple columns
-            cell_selectable=True  # allows selecting individual cells
+            cell_selectable=True,  # allows selecting individual cells
         ),
         html.Br(),
         dcc.Graph(
             figure=cache.get(DashBuyPackages.__name__).get_plotly_plot("goods.",
-                                                                      "area") if cache.get(
+                                                                       "area") if cache.get(
                 DashBuyPackages.__name__) is not None else [],
             id='buy-packages-plot',
             style={'height': '700px'})
@@ -84,7 +89,7 @@ def update_transformations(transforms):
         cache.get(DashBuyPackages.__name__).apply_transformation(transformation, forward=False)
     return cache.get(DashBuyPackages.__name__).data_frame.to_dict("records"), cache.get(
         DashBuyPackages.__name__).get_plotly_plot("goods.",
-                                                 "area")
+                                                  "area")
 
 
 @app.callback(
@@ -106,6 +111,28 @@ def update_output(n_clicks):
     if n_clicks > 0:
         TransformNoInverse.normalize(cache.get(DashBuyPackages.__name__).data_frame, "goods.")
     return cache.get(DashBuyPackages.__name__).data_frame.to_dict("records")
+
+
+@app.callback(
+    Output('editable-table', 'data', allow_duplicate=True),
+    Input('linear-button', 'n_clicks'),
+    State('editable-table', 'selected_cells'),
+    State('editable-table', 'data'),
+    prevent_initial_call=True)
+def update_linear_fill(n_clicks, active_cells, data):
+    patch = Patch()
+    return update_table_fill(n_clicks, active_cells, data, patch, linear_fill)
+
+
+@app.callback(
+    Output('editable-table', 'data', allow_duplicate=True),
+    Input('exponential-button', 'n_clicks'),
+    State('editable-table', 'selected_cells'),
+    State('editable-table', 'data'),
+    prevent_initial_call=True)
+def update_exponential_fill(n_clicks, active_cells, data):
+    patch = Patch()
+    return update_table_fill(n_clicks, active_cells, data, patch, exponential_fill)
 
 
 @app.callback(
@@ -180,29 +207,33 @@ def update_table(n_clicks, n_clicks_2, input_value, selected_columns, selected_c
     else:
         button_id = callback_context.triggered[0]['prop_id'].split('.')[0]
 
+    patched_table = Patch()
+
     if button_id in ['button-add', 'button-mult']:
         if selected_columns:  # if any column is selected
             for col_id in selected_columns:
-                for row in rows:
+                for i, row in enumerate(rows):
                     if row[col_id] and row[col_id] == row[col_id]:
                         if button_id == 'button-add':
-                            row[col_id] += input_value
+                            patched_table[i][col_id] = row[col_id] + input_value
                         elif button_id == 'button-mult':
-                            row[col_id] *= input_value
+                            patched_table[i][col_id] = row[col_id] * input_value
                     elif overwrite_zero:
                         if button_id == 'button-add':
-                            row[col_id] = input_value
+                            patched_table[i][col_id] = input_value
         elif selected_cells:  # if no column is selected
             for cell in selected_cells:
                 if rows[cell['row']][cell['column_id']] and rows[cell['row']][cell['column_id']] == rows[cell['row']][
                     cell['column_id']]:
                     if button_id == 'button-add':
-                        rows[cell['row']][cell['column_id']] += input_value
+                        patched_table[cell['row']][cell['column_id']] = rows[cell['row']][
+                                                                            cell['column_id']] + input_value
                     elif button_id == 'button-mult':
-                        rows[cell['row']][cell['column_id']] *= input_value
+                        patched_table[cell['row']][cell['column_id']] = rows[cell['row']][
+                                                                            cell['column_id']] * input_value
                 elif overwrite_zero:
                     if button_id == 'button-add':
-                        rows[cell['row']][cell['column_id']] = input_value
+                        patched_table[cell['row']][cell['column_id']] = input_value
                     elif button_id == 'button-mult':
-                        rows[cell['row']][cell['column_id']] = input_value
-    return rows
+                        patched_table[cell['row']][cell['column_id']] = input_value
+    return patched_table
