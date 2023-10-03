@@ -149,7 +149,7 @@ class Building:
         profit = self.calc_profit()
         employees = self.calc_employees()
         if employees:
-            return profit / employees
+            return 52 * profit / employees
         else:
             return np.nan
 
