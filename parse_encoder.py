@@ -3,9 +3,14 @@ from constants import Constants
 
 symbol_searches = [
     (r"([:\w\.-]+)|(\"[^\n]+\")", Constants.WORD_TYPE),
-    (r"=", Constants.EQUAL_TYPE),
+    (r"(?<=[^><?])=", Constants.EQUAL_TYPE),
     (r"{", Constants.BEGIN_DICT_TYPE),
-    (r"}", Constants.END_DICT_TYPE)
+    (r"}", Constants.END_DICT_TYPE),
+    (r">=", Constants.EQUAL_OR_GREATER_TYPE),
+    (r">(?=[^=])", Constants.GREATER_TYPE),
+    (r"<=", Constants.EQUAL_OR_LESSER_TYPE),
+    (r"<(?=[^=])", Constants.LESSER_TYPE),
+    (r"\?=", Constants.EQUAL_AND_EXISTS_TYPE)
 ]
 
 comment_symbol_searches = [
@@ -58,7 +63,8 @@ def parse_text(file_string):
 
 
 def encode_symbol(symbols, stack, iteration):
-    while symbols and (symbols[0][3] == Constants.PART_LINE_COMMENT_TYPE or symbols[0][3] == Constants.FULL_LINE_COMMENT_TYPE):
+    while symbols and (
+            symbols[0][3] == Constants.PART_LINE_COMMENT_TYPE or symbols[0][3] == Constants.FULL_LINE_COMMENT_TYPE):
         symbol = symbols.pop(0)
         stack[-1][iteration[0]] = symbol
         iteration[0] += 1
@@ -90,6 +96,24 @@ def encode_symbol(symbols, stack, iteration):
         elif symbols[0][3] == Constants.WORD_TYPE or symbols[0][3] == Constants.END_DICT_TYPE:
             stack[-1][symbol[2]] = True
 
+        if symbols[0][3] == Constants.EQUAL_OR_GREATER_TYPE or \
+                symbols[0][3] == Constants.GREATER_TYPE or symbols[0][3] == Constants.EQUAL_OR_LESSER_TYPE or \
+                symbols[0][3] == Constants.LESSER_TYPE or symbols[0][3] == Constants.EQUAL_AND_EXISTS_TYPE:
+            symbol = symbol + tuple([symbols[0][3]])
+            if symbols[1][3] == Constants.BEGIN_DICT_TYPE:
+                if not stack[-1].get(symbol):
+                    stack[-1][symbol] = dictionary
+                elif type(stack[-1][symbol]) == list:
+                    stack[-1][symbol].append(dictionary)
+                else:
+                    stack[-1][symbol] = [stack[-1][symbol], dictionary]
+
+                stack.append(dictionary)
+            elif symbols[1][3] == Constants.WORD_TYPE:
+                stack[-1][symbol] = symbols[1][2]
+            symbols.pop(0)
+            symbols.pop(0)
+
         for comment in comments:
             stack[-1][iteration[0]] = comment
             iteration[0] += 1
@@ -114,9 +138,13 @@ def process_comments(file_string):
 
 if __name__ == '__main__':
     from parse_decoder import decode_dictionary
+    from constants import Test
+    import os
 
+
+    path = os.path.join( Test.game_directory, "common\\buildings\\07_government.txt")
     # Test the parsing function
-    dictionary = parse_text_file("00_pop_needs.txt")
+    dictionary = parse_text_file(path)
     print(dictionary)
     print(decode_dictionary(dictionary))
 
