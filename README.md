@@ -35,7 +35,9 @@ Please make an issue for any bugs you find.
 
 ## These are the app current pages:
 Building designer with profitability visualisation.
-![Building Designer bar visualisation](.demo_materials/building_designer_bar.png)
-![Building Designer violin visualisation](.demo_materials/building_designer_violin.png)
+![Building Designer bar visualisation](.demo_materials/building_3.png)
+![Building Designer violin visualisation](.demo_materials/building_1.png)
 Pop needs adjuster with relative visualisation.
-![Pop buy packages visualisation](.demo_materials/pop_buy_packages_percentage.png)
+![Pop buy packages view options](.demo_materials/pop_needs_1.png)
+![Pop buy packages edit tools](.demo_materials/pop_needs_2.png)
+
