@@ -40,15 +40,18 @@ class BuildingDesignerConstants:
     }
 
     BASE_CONFIG = {
-        "unique": False,
-        "expandable": True
+        "unique": "exclude",
+        "expandable": "include",
+        "commercial": "indifferent",
+        "military": "indifferent"
+
     }
 
     ECONOMICS_CONFIG = update_and_return(BASE_CONFIG, {
-        "commercial": True,
-        "military": False
+        "commercial": "include",
+        "military": "exclude"
     })
 
     MILITARY_CONFIG = update_and_return(BASE_CONFIG, {
-        "military": True
+        "military": "include"
     })

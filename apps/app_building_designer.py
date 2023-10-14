@@ -22,55 +22,80 @@ def get_layout():
     attribute_options = [{'label': name.capitalize(), 'value': name} for name in Building.ATTRIBUTE_FUNCTIONS.keys()]
     attribute_start_value = attribute_options[0]["value"] if attribute_options else []
     attribute_config = Building.ATTRIBUTE_FUNCTIONS[attribute_start_value]
-
+    # noinspection PyTypeChecker
     return html.Div([
-        html.Button('Save Changes', id="save"),
-        html.Div(id="hidden-output-building", style={"display": "none"}),
-        dcc.Dropdown(
-            id='building-dropdown',
-            options=[{'label': i, 'value': i} for i in building_list],
-            value=''
-        ),
-        html.Div(id='method-dropdowns', className='dropdown-container'),
-        html.Div(id="summary"), dcc.Dropdown(
+                        html.Button('Save Changes', id="save"),
+                        html.Div(id="hidden-output-building", style={"display": "none"}),
+                        dcc.Dropdown(
+                            id='building-dropdown',
+                            options=[{'label': i, 'value': i} for i in building_list],
+                            value=''
+                        ),
+                        html.Div(id='method-dropdowns', className='dropdown-container'),
+                        html.Div(id="summary"), dcc.Dropdown(
             id='attribute-dropdown',
             options=attribute_options,
             value=attribute_start_value,
             placeholder='Select an attribute...'
         ),
-        html.Div([
-            dcc.Dropdown(
-                id='plot-type-dropdown',
-                options=[
-                    {'label': 'Violin', 'value': 'Violin'},
-                    {'label': 'Bar', 'value': 'Bar'},
-                ],
-                value='Violin',
-                placeholder='Select a plot type...'
-            ),
-            dcc.Dropdown(
-                id='era-dropdown',
-                options=[{'label': i, 'value': i} for i in era_list],
-                value=era_list,
-                multi=True,
-                placeholder='Select eras...'
-            ),
-            dcc.Checklist(
-                id='building-filter-options',
-                options=filter_options,
-                value=[name for name, is_enabled in attribute_config["config"].items() if is_enabled],
-            )], className='horizontal-container'
-        ),
-        dcc.Graph(id='building-plot',
-                  figure=cache.get(DashBuildings.__name__).get_plotly_plot(attribute_start_value, attribute_config,
-                                                                           selected_building="",
-                                                                           eras=era_list) if cache.get(
-                      DashBuildings.__name__) else [])
-    ])
+                        html.Div([
+                            dcc.Dropdown(
+                                id='plot-type-dropdown',
+                                options=[
+                                    {'label': 'Violin', 'value': 'Violin'},
+                                    {'label': 'Bar', 'value': 'Bar'},
+                                ],
+                                value='Violin',
+                                placeholder='Select a plot type...'
+                            ),
+                            dcc.Dropdown(
+                                id='era-dropdown',
+                                options=[{'label': i, 'value': i} for i in era_list],
+                                value=era_list,
+                                multi=True,
+                                placeholder='Select eras...'
+                            )],
+
+                            # dcc.Checklist(
+                            #     id='building-filter-options',
+                            #     options=filter_options,
+                            #     value=[name for name, is_enabled in attribute_config["config"].items() if is_enabled],
+                            # )],
+                            className='horizontal-container'
+                        )] + generate_radio_items(filter_options, attribute_config["config"]) + [
+                        dcc.Graph(id='building-plot',
+                                  figure=cache.get(DashBuildings.__name__).get_plotly_plot(attribute_start_value,
+                                                                                           attribute_config,
+                                                                                           selected_building="",
+                                                                                           eras=era_list) if cache.get(
+                                      DashBuildings.__name__) else [])])
 
 
 requirements = [Goods, ProductionMethodGroups, ProductionMethods, BuildingGroups,
                 DashBuildings, Technologies, Eras]
+
+
+# Generate radio items
+def generate_radio_items(labels, config):
+    radio_items = []
+    for label_dict in labels:
+        label, id_label = label_dict["label"], label_dict["value"]
+        value = config[id_label] if config.get(id_label) else "indifferent"
+        item = html.Div([
+            html.Label(label + ":"),
+            dcc.RadioItems(
+                id={"index": id_label, "type": "filter_option"},
+                options=[
+                    {'label': 'Must Include', 'value': 'include'},
+                    {'label': 'Indifferent', 'value': 'indifferent'},
+                    {'label': 'Must Exclude', 'value': 'exclude'},
+                ],
+                value=value,  # Default value
+                labelStyle={'display': 'inline-block', 'margin-right': '10px'},
+            )],
+            className='horizontal-container')
+        radio_items.append(item)
+    return radio_items
 
 
 @app.callback(
@@ -135,9 +160,10 @@ def update_info_div(selected_value):
     State('attribute-dropdown', 'value'),
     State('plot-type-dropdown', 'value'),
     State('era-dropdown', 'value'),
-    State('building-filter-options', 'value'),
+    State({"index": ALL, "type": 'filter_option'}, 'id'),
+    State({"index": ALL, "type": 'filter_option'}, 'value'),
     prevent_initial_call=True)
-def update_database(info_value, selected_building, attribute, plot_type, eras, building_filter_options):
+def update_database(info_value, selected_building, attribute, plot_type, eras, building_filter_name, building_filter_status):
     args = callback_context.args_grouping[0]  # info_value but then complete
     building_name = None
     for input_args in args:
@@ -153,7 +179,7 @@ def update_database(info_value, selected_building, attribute, plot_type, eras, b
     if building_name and cache.get(DashBuildings.__name__):
         cache.get(DashBuildings.__name__).reset_building(building_name)
         attribute_config = Building.ATTRIBUTE_FUNCTIONS[attribute]
-        attribute_config["config"].update({name: True for name in building_filter_options})
+        attribute_config["config"].update({name["index"]: building_filter_status[i] for i, name in enumerate(building_filter_name)})
         return cache.get(DashBuildings.__name__).get_plotly_plot(
             attribute, attribute_config, plot_type, selected_building, eras
         )
@@ -179,26 +205,28 @@ def update_database(info_value, selected_building, attribute, plot_type, eras, b
 
 @app.callback(
     Output('building-plot', 'figure'),
-    Output('building-filter-options', 'value'),
+    Output({"index": ALL, "type": 'filter_option'}, 'value'),
     Input('building-dropdown', 'value'),
     Input('attribute-dropdown', 'value'),
     Input('plot-type-dropdown', 'value'),
     Input('era-dropdown', 'value'),
-    Input('building-filter-options', 'value'),
+    Input({"index": ALL, "type": 'filter_option'}, 'id'),
+    Input({"index": ALL, "type": 'filter_option'}, 'value'),
     prevent_initial_call=True
 )
-def update_figure(selected_building, attribute, plot_type, eras, building_filter_options):
+def update_figure(selected_building, attribute, plot_type, eras, building_filter_name, building_filter_status):
     triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0] if callback_context.triggered else None
+    print(building_filter_status)
 
-    filter_value = no_update
+    filter_value = building_filter_status
     if triggered_id == 'attribute-dropdown':
         attribute_config = Building.ATTRIBUTE_FUNCTIONS[attribute]
-        filter_value = [name for name, is_enabled in attribute_config["config"].items() if is_enabled]
-        building_filter_options = filter_value
+        filter_value = [attribute_config["config"][name] for name in building_filter_name]
+        building_filter_status = filter_value
 
     if cache.get(DashBuildings.__name__):
         attribute_config = copy.deepcopy(Building.ATTRIBUTE_FUNCTIONS[attribute])
-        attribute_config["config"].update({name: True for name in building_filter_options})
+        attribute_config["config"].update({name["index"]: building_filter_status[i] for i, name in enumerate(building_filter_name)})
         return cache.get(DashBuildings.__name__).get_plotly_plot(
             attribute, attribute_config, plot_type, selected_building, eras
         ), filter_value

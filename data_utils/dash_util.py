@@ -9,7 +9,15 @@ def filter_and_score_objects(objects, object_name, attribute, era, attribute_con
     filter_conditions = attribute_config["config"]
     for name, object in objects.items():
         for condition_name, truth_value in filter_conditions.items():
-            if condition_name and filter_functions[condition_name](object) != truth_value:
+            condition_value = filter_functions[condition_name](object)
+            if truth_value == "include":
+                truth_value = True
+            elif truth_value == "exclude":
+                truth_value = False
+            elif truth_value == "indifferent":
+                continue
+
+            if condition_name and condition_value != truth_value:
                 break
         else:
             data[object_name].append(name)
