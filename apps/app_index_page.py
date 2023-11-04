@@ -4,8 +4,8 @@ from dash.exceptions import PreventUpdate
 from tkinter import filedialog, Tk
 import os
 
-from app import app, cache
-
+from app import app, cache, config
+from config import save_configurations
 
 def get_layout():
     return html.Div([
@@ -46,9 +46,11 @@ def select_folder_path(n_clicks):
         path = os.path.normpath(path)
         if path != cache.get("game_directory"):
             tmp_mod_directory = cache.get("game_mod_directory", path)
-            cache.clear()
-            cache.set("game_directory", path)
-            cache.set("mod_directory", tmp_mod_directory)
+            cache.clear()  # to clear all cached results from other pages
+            config["game_directory"] = path
+            cache.set("game_directory", config["game_directory"])
+            cache.set("mod_directory", config["mod_directory"])
+            save_configurations(config)
         return f'Selected folder: {path}'
     else:
         return f'Selected folder: {cache.get("game_directory")}'
@@ -68,10 +70,11 @@ def select_folder_path(n_clicks):
     if path:
         path = os.path.normpath(path)
         if path != cache.get("mod_directory"):
-            tmp_game_directory = cache.get("game_directory", path)
-            cache.clear()
-            cache.set("mod_directory", path)
-            cache.set("game_directory", tmp_game_directory)
+            cache.clear()  # to clear all cached results from other pages
+            config["mod_directory"] = path
+            cache.set("mod_directory", config["mod_directory"])
+            cache.set("game_directory", config["game_directory"])
+            save_configurations(config)
             return f'Selected folder: {path}'
         else:
             return f'Selected folder: {cache.get("mod_directory")}'
