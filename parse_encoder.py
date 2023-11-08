@@ -10,7 +10,8 @@ symbol_searches = [
     (r">(?=[^=])", Constants.GREATER_TYPE),
     (r"<=", Constants.EQUAL_OR_LESSER_TYPE),
     (r"<(?=[^=])", Constants.LESSER_TYPE),
-    (r"\?=", Constants.EQUAL_AND_EXISTS_TYPE)
+    (r"\?=", Constants.EQUAL_AND_EXISTS_TYPE),
+    (r"\!=", Constants.NOT_EQUAL_TYPE)
 ]
 
 comment_symbol_searches = [

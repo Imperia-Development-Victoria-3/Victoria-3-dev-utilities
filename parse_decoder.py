@@ -18,6 +18,8 @@ def decode_dictionary(dictionary, depth=0):
                 operator = " > "
             elif key[-1] == Constants.EQUAL_AND_EXISTS_TYPE:
                 operator = " ?= "
+            elif key[-1] == Constants.NOT_EQUAL_TYPE:
+                operator = " != "
             key = str(key[2])
         if type(value) == dict:
             if len(result) >= 2 and result[-2] == "}":

@@ -17,6 +17,7 @@ class Constants:
     LESSER_TYPE = 9
     GREATER_TYPE = 10
     EQUAL_AND_EXISTS_TYPE = 11
+    NOT_EQUAL_TYPE = 12
 
 
 class Test:
