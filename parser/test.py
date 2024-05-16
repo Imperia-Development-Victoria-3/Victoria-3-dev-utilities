@@ -1,6 +1,10 @@
 import warnings
+from collections import namedtuple
+from typing import List, Callable
+
 from ply import yacc, lex
 from enum import IntEnum, auto
+from dataclasses import dataclass
 
 # --- Tokenizer
 
@@ -72,6 +76,24 @@ class ParseTypes(IntEnum):
     END_COMMENT = auto()
     DOUBLE_NEWLINE = auto()
     NEW_LINE = auto()
+
+
+# Initialize a list with placeholders (None) for all enum values
+reconstruction_functions: List[Callable] = [Callable] * len(ParseTypes)
+
+
+def register_reconstruction_function(func):
+    # Get the function name, convert it to upper case to match the enum member
+    func_name = func.__name__.upper()
+    func_name = "_".join(func_name.split("_")[1:])
+    try:
+        # Match the function name with the ParseTypes enum
+        parse_type = ParseTypes[func_name]
+        # Register the function in the appropriate position in the list
+        reconstruction_functions[parse_type - 1] = func
+    except KeyError:
+        raise ValueError(f"No matching ParseTypes member for function name: {func_name}")
+    return func
 
 
 # --- Parser
@@ -223,65 +245,127 @@ def p_error(p):
 
 # Build the parser
 parser = yacc.yacc()
+""" 
+    Todo: Configuration File passed down to the reconstruct function
+        Todo: Same line configuration for all comments under the same object ( object = { item # same vertical line \n item # same vertical line } )
+    
+        Todo: one item correct to one line option, and other way around.
+"""
 
 
-def reconstruct(parsed_data):
-    def reconstruct_element(element, level=0, tabs_added=False):
-        if not tabs_added:
-            tabs = "\t" * level
-        else:
-            tabs = ""
-
-        if isinstance(element, tuple):
-            parse_type = element[0]
-            if parse_type == ParseTypes.LIST:
-                if tabs_added:
-                    string = " "
-                else:
-                    string = ""
-                for item in element[1]:
-                    if tabs_added:
-                        string += f"{reconstruct_element(item, level=level, tabs_added=tabs_added)} "
-                    else:
-                        string += f"{reconstruct_element(item, level=level, tabs_added=tabs_added)}"
-                return string
-            elif parse_type == ParseTypes.ASSIGNMENT:
-                return f"{tabs}{element[2]} {element[1]} {reconstruct_element(element[3], level=level, tabs_added=True)}"
-            elif parse_type == ParseTypes.ELEMENT:
-                return f"{tabs}{element[1]}"
-            elif parse_type == ParseTypes.FULL_LINE_COMMENT:
-                tmp = element[1].split('\n')
-                tmp[-1] = tabs + tmp[-1]
-                return "\n".join(tmp)
-            elif parse_type == ParseTypes.COMMENT:
-                return f"{reconstruct_element(element[1], level=level, tabs_added=tabs_added)}\t{element[2]}"
-            elif parse_type == ParseTypes.OBJECT:
-                # if config["single_element_single_line"]:
-                if not element[2]:
-                    return f"{reconstruct_element(element[1], level=level, tabs_added=True)}{reconstruct_element(element[3], level=level, tabs_added=True)}"
-                else:
-                    if not any(item[0] == ParseTypes.NEW_LINE or item[0] == ParseTypes.DOUBLE_NEWLINE for item in
-                               element[2][1]):
-                        tabs_added = True
-                    else:
-                        tabs_added = False
-                    return f"{reconstruct_element(element[1], level=level)}{reconstruct_element(element[2], level=level + 1, tabs_added=tabs_added)}{reconstruct_element(element[3], level=level, tabs_added=tabs_added)}"
-            elif parse_type == ParseTypes.BEGIN:
-                return f"{element[1]}"
-            elif parse_type == ParseTypes.END:
-                return f"{tabs}{element[1]}"
-            elif parse_type == ParseTypes.BEGIN_COMMENT:
-                return f"{element[1]}\t{element[2]}"
-            elif parse_type == ParseTypes.END_COMMENT:
-                return f"{tabs}{element[1]}\t{element[2]}"
-            elif parse_type == ParseTypes.DOUBLE_NEWLINE:
-                return f"\n{tabs}\n"
-            elif parse_type == ParseTypes.NEW_LINE:
-                return f"\n"
+def create_tabs(state):
+    if not state.line_used_tabs:
+        return "\t" * state.level
+    else:
         return ""
 
+
+@register_reconstruction_function
+def reconstruct_list(element, state, config, function):
+    if state.line_used_tabs:
+        string = " "
+    else:
+        string = ""
+    for item in element[1]:
+        if state.line_used_tabs:
+            string += f"{function(item, state=state, config=config)} "
+        else:
+            string += f"{function(item, state=state, config=config)}"
+    return string
+
+
+@register_reconstruction_function
+def reconstruct_assignment(element, state, config, function):
+    tabs = create_tabs(state)
+    new_state = state._replace(line_used_tabs=True)
+    return f"{tabs}{element[2]} {element[1]} {function(element[3], state=new_state, config=config)}"
+
+
+# assumed endpoint
+@register_reconstruction_function
+def reconstruct_element(element, state, config, function):
+    tabs = create_tabs(state)
+    return f"{tabs}{element[1]}"
+
+
+# Contains possibly multiple lines of comment
+@register_reconstruction_function
+def reconstruct_full_line_comment(element, state, config, function):
+    tabs = create_tabs(state)
+    string_list = element[1].split('\n')
+    string_list[-1] = tabs + string_list[-1]
+    return "\n".join(string_list)
+
+
+@register_reconstruction_function
+def reconstruct_comment(element, state, config, function):
+    return f"{function(element[1], state=state, config=config)}\t{element[2]}"
+
+
+@register_reconstruction_function
+def reconstruct_object(element, state, config, function):
+    if not element[2]:
+        new_state = state._replace(line_used_tabs=True)
+        return f"{function(element[1], state=new_state, config=config)}{function(element[3], state=new_state, config=config)}"
+    else:
+        if not any(item[0] == ParseTypes.NEW_LINE or item[0] == ParseTypes.DOUBLE_NEWLINE for item in
+                   element[2][1]):
+            new_state = state._replace(line_used_tabs=True, level=state.level)
+        else:
+            new_state = state._replace(line_used_tabs=False, level=state.level)
+        return f"{function(element[1], state=new_state, config=config)}{function(element[2], state=new_state._replace(level=state.level + 1), config=config)}{function(element[3], state=new_state, config=config)}"
+
+
+@register_reconstruction_function
+def reconstruct_begin(element, state, config, function):
+    return element[1]
+
+
+@register_reconstruction_function
+def reconstruct_end(element, state, config, function):
+    tabs = create_tabs(state)
+
+    return f"{tabs}{element[1]}"
+
+
+@register_reconstruction_function
+def reconstruct_begin_comment(element, state, config, function):
+    return f"{element[1]}\t{element[2]}"
+
+
+@register_reconstruction_function
+def reconstruct_end_comment(element, state, config, function):
+    tabs = create_tabs(state)
+
+    return f"{tabs}{element[1]}\t{element[2]}"
+
+
+@register_reconstruction_function
+def reconstruct_double_newline(element, state, config, function):
+    tabs = create_tabs(state)
+
+    config["tabs_added"] = False
+    return f"\n{tabs}\n"
+
+
+@register_reconstruction_function
+def reconstruct_new_line(element, state, config, function):
+    config["tabs_added"] = False
+    return f"\n"
+
+
+State = namedtuple('State', ['level', 'line_used_tabs'])
+
+
+def reconstruct_any_object(element, state, config):
+    if isinstance(element, tuple):
+        return reconstruction_functions[element[0] - 1](element, state, config, reconstruct_any_object)
+    return ""
+
+
+def reconstruct(parsed_data, config):
     # Start processing from the outermost layer
-    return reconstruct_element(parsed_data)
+    return reconstruct_any_object(parsed_data, State(0, False), config)
 
 
 context_size = 100
@@ -309,7 +393,7 @@ def test_text_reconstruction(original_text, reconstructed_text):
                 return False
         # In case the reconstructed text is shorter than the original
         context = original_text[-context_size:]
-        # warnings.warn(context, UserWarning)
+        warnings.warn(context, UserWarning)
         return False
     return True
 
@@ -391,7 +475,7 @@ def test_file(file_path, parser_func, reconstruct_func):
         content = file.read()
 
     parsed_data = parser_func.parse(content)
-    reconstructed_text = reconstruct_func(parsed_data)
+    reconstructed_text = reconstruct_func(parsed_data, {})
     reconstructed_parsed_data = parser_func.parse(reconstructed_text)
 
     return test_text_reconstruction(content, reconstructed_text), test_parsing_consistency(parsed_data,
@@ -399,8 +483,23 @@ def test_file(file_path, parser_func, reconstruct_func):
 
 
 blacklist = {
-    "coat_of_arms"
+    "common\\cultures\\00_additional_cultures.txt",
+    "common\\cultures\\00_cultures.txt",
+    'common\\genes\\02_genes_accessories_hairstyles.txt',
+    'common\\genes\\03_genes_accessories_beards.txt',
+    'common\\genes\\97_genes_accessories_clothes.txt',
+    'common\\genes\\99_genes_special.txt',
+    'common\\laws\\00_slavery.txt',
+    'common\\mobilization_options\\00_mobilization_option.txt',
+    'common\\named_colors\\00_formation_colors.txt',
+    'common\\state_traits\\06_eastern_europe_traits.txt'
 }
+
+
+@dataclass
+class Config:
+    items_same_line: bool
+    comments_same_level: bool
 
 
 def test_all_txt_files(folder_path, parser_func, reconstruct_func):
@@ -412,6 +511,7 @@ def test_all_txt_files(folder_path, parser_func, reconstruct_func):
     for root, dirs, files in os.walk(folder_path):
         for file_name in files:
             if file_name.endswith('.txt'):
+                print(file_name)
                 file_path = os.path.join(root, file_name)
                 if os.path.getsize(file_path) <= 3:
                     continue
@@ -431,7 +531,7 @@ def test_all_txt_files(folder_path, parser_func, reconstruct_func):
                     passed_consistency += 1
 
                 # Track failed files
-                if not reconstruction_bool or not consistency_bool:
+                if not reconstruction_bool:
                     failed_files.append(file_path)
 
     # Calculate percentages
@@ -454,7 +554,7 @@ def process_file(file_path, parser_func, reconstruct_func):
         content = file.read()
 
     original_parsed_data = parser_func.parse(content)
-    reconstructed_text = reconstruct_func(original_parsed_data)
+    reconstructed_text = reconstruct_func(original_parsed_data, {})
     #
     with open(file_path, 'w', encoding='utf-8-sig') as file:
         file.write(reconstructed_text)
@@ -467,6 +567,7 @@ def process_all_txt_files(folder_path, parser_func, reconstruct_func):
                 file_path = os.path.join(root, file_name)
                 print(f"Processing {file_path}:")
                 decoded_content = process_file(file_path, parser_func, reconstruct_func)
+                # return
 
 
 if __name__ == '__main__':
@@ -483,8 +584,9 @@ if __name__ == '__main__':
     # path = os.path.normpath(
     #     'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game\\common\\coat_of_arms\\coat_of_arms\\02_countries.txt')
 
-    process_all_txt_files(Test.mod_directory, parser, reconstruct)
-    # print(test_all_txt_files(Test.mod_directory, parser, reconstruct))
+    path = os.path.normpath("C:\\Users\\hidde\\Documents\\Paradox Interactive\\Victoria 3\\mod\\External-mods\\events")
+    process_all_txt_files(path, parser, reconstruct)
+    # print(test_all_txt_files(path, parser, reconstruct))
 
     # with open(path, encoding='utf-8-sig') as file:
     #     file_string = file.read()

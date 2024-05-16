@@ -9,7 +9,7 @@ from config import save_configurations
 
 def get_layout():
     return html.Div([
-        html.H1('Welcome to the babylon dev tools'),
+        html.H1('Welcome to the imperia dev tools'),
         html.H2('Please choose the application you want to go to:'),
         html.Div([
             dcc.Link('Go to Buy Package app', href='/apps/app_buy_packages.py'),

@@ -1,4 +1,4 @@
-This is the public repository of Babylon Development focused on providing developers with tools to better mod Victoria games
+This is the public repository of Imperia Development focused on providing developers with tools to better mod Victoria games
 
 The tool featured is developed in python and uses dash and plotly to visualise game data as you try and edit it within your browser. 
 
@@ -15,7 +15,7 @@ The tool featured is developed in python and uses dash and plotly to visualise g
 - Barebones UI, I personally care only about the plots, so I don't spend time on brushing up the UI
 - Only tuning (for now), no adding new stuff like new production methods or new popneeds.
 
-## To Install & use ([Click here for the newbie guide](https://github.com/Babylon-Development-Victoria-3/Victoria-3-dev-utilities/wiki/Dev-Utilities-for-Dummies))
+## To Install & use ([Click here for the newbie guide](https://github.com/Imperia-Development-Victoria-3/Victoria-3-dev-utilities/wiki/Dev-Utilities-for-Dummies))
 
 To launch the software you require:
  - `python>=3.7`
