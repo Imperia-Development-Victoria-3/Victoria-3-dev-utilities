@@ -38,13 +38,13 @@ def test_parsing_consistency(original_parsed_data, reconstructed_parsed_data):
     return original_parsed_data == reconstructed_parsed_data
 
 
-def test_file(file_path, parser_func, reconstruct_func):
+def test_file(file_path, parser_func, reconstruct_func, config):
     # Read the content
     with open(file_path, 'r', encoding='utf-8-sig') as file:
         content = file.read()
 
     parsed_data = parser_func.parse(content)
-    reconstructed_text = reconstruct_func(parsed_data, {})
+    reconstructed_text = reconstruct_func(parsed_data, config)
     reconstructed_parsed_data = parser_func.parse(reconstructed_text)
 
     return test_text_reconstruction(content, reconstructed_text), test_parsing_consistency(parsed_data,
@@ -98,6 +98,7 @@ class Mutex:
     def check_int(self, config: dict) -> bool:
         new_key_list = [key for key in self.keys if config[key] is not None]
         for i, key in enumerate(new_key_list[1:], 1):
+            print(config[new_key_list[i - 1]],  config[key])
             if config[key] is None or config[new_key_list[i - 1]] > config[key]:
                 return False
         return True
@@ -138,23 +139,21 @@ def parse_args():
     parser = argparse.ArgumentParser(description="A script with YAML config and command-line args")
     parser.add_argument('--config', type=str, help='Path to the YAML configuration file', default=os.path.normpath('parser/config/general.yml'))
     parser.add_argument('--default_no_double_line', type=bool, help='Default no double line')
-    parser.add_argument('--allow_single_list_no_double_line', type=bool, help='Allow single list no double line')
     parser.add_argument('--default_yes_double_line', type=bool, help='Default yes double line')
     parser.add_argument('--object_yes_double_line', type=bool, help='Object yes double line')
     parser.add_argument('--force_single_line_until_item_count', type=int, help='Force single line until item count')
     parser.add_argument('--force_multi_line_from_item_count', type=int, help='Force multi line from item count')
 
     mutex_1 = Mutex(["default_no_double_line", "default_yes_double_line"], True, bool)
-    mutex_2 = Mutex(["force_single_line_until_item_count", "force_multi_line_from_item_count"], True, bool)
     mutex_3 = Mutex(["object_yes_double_line"], True, bool)
-    mutex_4 = Mutex(["allow_single_list_no_double_line", "default_yes_double_line", "force_multi_line_from_item_count"], True, bool)
-    mutex_5 = Mutex(["force_single_line_until_item_count", "force_multi_line_from_item_count"], False, int)
-    mutexes = [mutex_1, mutex_2, mutex_3, mutex_4, mutex_5]
+    mutex_4 = Mutex(["default_yes_double_line", "force_multi_line_from_item_count"], True, bool)
+    mutex_5 = Mutex(["force_single_line_until_item_count", "force_multi_line_from_item_count"], True, int)
+    mutexes = [mutex_1, mutex_3, mutex_4, mutex_5]
 
     return parser.parse_args(), mutexes
 
 
-def test_all_txt_files(folder_path, parser_func, reconstruct_func):
+def test_all_txt_files(folder_path, parser_func, reconstruct_func, config = {}):
     total_files = 0
     passed_reconstruction = 0
     passed_consistency = 0
@@ -172,7 +171,7 @@ def test_all_txt_files(folder_path, parser_func, reconstruct_func):
 
                 print("Testing", file_path)
                 try:
-                    reconstruction_bool, consistency_bool = test_file(file_path, parser_func, reconstruct_func)
+                    reconstruction_bool, consistency_bool = test_file(file_path, parser_func, reconstruct_func, config)
                 except TypeError:
                     reconstruction_bool = False
                     consistency_bool = False
@@ -265,22 +264,26 @@ if __name__ == '__main__':
     #     'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game\\common\\coat_of_arms\\coat_of_arms\\02_countries.txt')
 
     # path = os.path.normpath("C:\\Users\\hidde\\Documents\\Paradox Interactive\\Victoria 3\\mod\\External-mods")
-    path = os.path.normpath(
-        "C:\\Users\\hidde\\Documents\\Paradox Interactive\\Victoria 3\\mod\\Victoria-3-dev")
-
-    # process_all_txt_files(path, parser, reconstruct, exclusion_list, config)
-    # print(test_all_txt_files(path, parser, reconstruct))
-
-    # with open(path, encoding='utf-8-sig') as file:
-    #     file_string = file.read()
-    # # print(path)
-
-    # parsed_data = parser.parse(test_input)
-    # reconstructed_text = reconstruct(parsed_data)
-    # reconstructed_parsed_data = parser.parse(reconstructed_text)
+    # path = os.path.normpath(
+    #     "C:\\Users\\hidde\\Documents\\Paradox Interactive\\Victoria 3\\mod\\Victoria-3-dev")
     #
-    # print(test_text_reconstruction(test_input, reconstructed_text))
-    # print(test_parsing_consistency(parsed_data, reconstructed_parsed_data))
+    # process_all_txt_files(path, parser, reconstruct, exclusion_list, config)
+    # print(test_all_txt_files(path, parser, reconstruct, config))
+
+    path = os.path.normpath("C:\\Users\\hidde\\Documents\\Paradox Interactive\\Victoria 3\\mod\\Victoria-3-dev\\common\\character_traits\\skill_traits.txt")
+    process_file(path, parser, reconstruct, config)
+    with open(path, encoding='utf-8-sig') as file:
+        file_string = file.read()
+    # print(path)
+
+    parsed_data = parser.parse(file_string)
+    reconstructed_text = reconstruct(parsed_data, config)
+    reconstructed_parsed_data = parser.parse(reconstructed_text)
+    reconstructed_parsed_text = reconstruct(reconstructed_parsed_data, config)
+
+    #
+    print(test_text_reconstruction(file_string, reconstructed_parsed_text))
+    print(test_parsing_consistency(reconstructed_text, reconstructed_parsed_data))
     # #
     # # print(file_string)
     # # Parse an expression
