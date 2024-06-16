@@ -1,8 +1,9 @@
 import copy
 import os
 from parse_encoder import parse_text_file
-from deepdiff import DeepDiff, extract
-from data_utils import set_nested_obj, exclude_int_keys_callback, _path_to_elements, extract, del_nested_obj
+from deepdiff import DeepDiff
+from deepdiff.path import _path_to_elements, extract
+from data_utils import set_nested_obj, exclude_int_keys_callback, del_nested_obj
 
 
 class DataFormat:
