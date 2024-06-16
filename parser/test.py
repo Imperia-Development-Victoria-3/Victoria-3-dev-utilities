@@ -1,6 +1,8 @@
+import argparse
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
+import yaml
 
 context_size = 100
 
@@ -68,6 +70,88 @@ exclusion_list = {
 class Config:
     items_same_line: bool
     comments_same_level: bool
+
+
+class Mutex:
+
+    def __init__(self, keys, can_be_empty, type):
+        self.keys = keys
+        self.can_be_empty = can_be_empty
+        self.type = type
+
+    def check(self, config: dict) -> bool:
+        if self.type == bool:
+            return self.check_bool(config)
+        elif self.type == int:
+            return self.check_int(config)
+
+    def check_bool(self, config) -> bool:
+        count = 0
+        for key in self.keys:
+            if config[key]:
+                count += 1
+        if count == 1 or (count == 0 and self.can_be_empty):
+            return True
+        return False
+
+    # assumes > ordered series of numbers creating a mutually exclusive integer ranges
+    def check_int(self, config: dict) -> bool:
+        new_key_list = [key for key in self.keys if config[key] is not None]
+        for i, key in enumerate(new_key_list[1:], 1):
+            if config[key] is None or config[new_key_list[i - 1]] > config[key]:
+                return False
+        return True
+
+    def set(self, config: dict, key: str, value: int = None) -> None:
+        if key not in self.keys:
+            raise ValueError("Tried to set non existant key")
+        if self.type == int and value is None:
+            raise ValueError("Tried to set int mutex without giving a value")
+
+        if self.type == bool:
+            self.set_bool(config, key)
+        elif self.type == int:
+            self.set_int(config, key, value)
+
+    def set_bool(self, config: dict, set_key: str) -> None:
+        for key in self.keys:
+            if key is not set_key:
+                config[key] = False
+            else:
+                config[key] = True
+
+    def set_int(self, config: dict, set_key: str, set_value: int) -> None:
+        index = self.keys.index(set_key)
+        for key in self.keys[:set_key]:
+            value = config[key]
+            if value > set_value:
+                config[set_key] = set_value
+
+
+def load_yaml_config(file_path):
+    with open(file_path, 'r') as file:
+        config = yaml.safe_load(file)
+    return config
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="A script with YAML config and command-line args")
+    parser.add_argument('--config', type=str, help='Path to the YAML configuration file', default=os.path.normpath('parser/config/general.yml'))
+    parser.add_argument('--default_no_double_line', type=bool, help='Default no double line')
+    parser.add_argument('--allow_single_list_no_double_line', type=bool, help='Allow single list no double line')
+    parser.add_argument('--default_yes_double_line', type=bool, help='Default yes double line')
+    parser.add_argument('--object_yes_double_line', type=bool, help='Object yes double line')
+    parser.add_argument('--force_single_line_until_item_count', type=int, help='Force single line until item count')
+    parser.add_argument('--force_multi_line_from_item_count', type=int, help='Force multi line from item count')
+
+    mutex_1 = Mutex(["default_no_double_line", "default_yes_double_line"], True, bool)
+    mutex_2 = Mutex(["force_single_line_until_item_count", "force_multi_line_from_item_count"], True, bool)
+    mutex_3 = Mutex(["object_yes_double_line"], True, bool)
+    mutex_4 = Mutex(["allow_single_list_no_double_line", "default_yes_double_line", "force_multi_line_from_item_count"], True, bool)
+    mutex_5 = Mutex(["force_single_line_until_item_count", "force_multi_line_from_item_count"], False, int)
+    mutexes = [mutex_1, mutex_2, mutex_3, mutex_4, mutex_5]
+
+    return parser.parse_args(), mutexes
 
 
 def test_all_txt_files(folder_path, parser_func, reconstruct_func):
@@ -157,16 +241,24 @@ if __name__ == '__main__':
     from victoria_script_parses import parser
     from victoria_script_reconstructor import reconstruct
 
-    # print(re.search(t_PART_COMMENT,test_input ))
     from constants import Test
     import os
 
-    config = {"default_no_double_line": True,
-              "allow_single_list_no_double_line": True,
-              "default_yes_double_line": False,
-              "object_yes_double_line": True,
-              "force_single_line_until_item_count": None,
-              "force_multi_line_from_item_count": 0}
+    args, mutexes = parse_args()
+    config = load_yaml_config(args.config)["config"]
+
+    args_dict = vars(args)
+    config_path = args_dict.pop('config')
+
+    # Override config values with command-line arguments if provided
+    for key, value in args_dict.items():
+        if value is not None:
+            config[key] = value
+
+
+    for mutex in mutexes:
+        if not mutex.check(config):
+            raise Exception(f"The provided general config is not valid conflicting mutexes are: {mutex.keys} with values {[config[key] for key in mutex.keys]}\n(only one should be true, or ints should be in ascending order)")
 
     # path = os.path.join(Test.game_directory, "common\\")
     # path = os.path.normpath(
@@ -174,9 +266,9 @@ if __name__ == '__main__':
 
     # path = os.path.normpath("C:\\Users\\hidde\\Documents\\Paradox Interactive\\Victoria 3\\mod\\External-mods")
     path = os.path.normpath(
-        "C:\\Users\\hidde\\Documents\\Paradox Interactive\\Victoria 3\\mod\\Victoria-3-dev\\common\\ai_strategies")
+        "C:\\Users\\hidde\\Documents\\Paradox Interactive\\Victoria 3\\mod\\Victoria-3-dev")
 
-    process_all_txt_files(path, parser, reconstruct, exclusion_list, config)
+    # process_all_txt_files(path, parser, reconstruct, exclusion_list, config)
     # print(test_all_txt_files(path, parser, reconstruct))
 
     # with open(path, encoding='utf-8-sig') as file:

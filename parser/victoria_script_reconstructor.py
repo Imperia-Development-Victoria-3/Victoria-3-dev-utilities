@@ -56,7 +56,7 @@ def reconstruct_list(element, state, config, function):
     if not final_list:
         return ""
     default_no_new_lines = not (final_list[0][0] == ParseTypes.NEW_LINE or final_list[0][
-        0] == ParseTypes.DOUBLE_NEWLINE) and state.level > 0
+        0] == ParseTypes.DOUBLE_NEWLINE or final_list[0][0] == ParseTypes.FULL_LINE_COMMENT) and state.level > 0
 
     new_state = state._replace(no_new_lines=default_no_new_lines)
     string = ""
@@ -70,6 +70,15 @@ def reconstruct_list(element, state, config, function):
                 for e in item[3][2][1]:
                     if e[0] != ParseTypes.NEW_LINE and e[0] != ParseTypes.DOUBLE_NEWLINE:
                         count += 1
+                if not count <= config["force_single_line_until_item_count"]:
+                    count = count * 2 + 1
+            elif config["force_multi_line_from_item_count"] is not None:
+                count = 0
+                for e in item[3][2][1]:
+                    if e[0] != ParseTypes.NEW_LINE and e[0] != ParseTypes.DOUBLE_NEWLINE:
+                        count += 1
+                if count > config["force_multi_line_from_item_count"]:
+                    count = count * 2 + 1
             else:
                 count = len(item[3][2][1])
             new_state = new_state._replace(item_count_object=count)

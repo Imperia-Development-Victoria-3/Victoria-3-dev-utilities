@@ -1,0 +1,7 @@
+config:
+  default_no_double_line: true
+  allow_single_list_no_double_line: false
+  default_yes_double_line: false
+  object_yes_double_line: true
+  force_single_line_until_item_count: 0
+  force_multi_line_from_item_count: 1
