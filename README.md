@@ -26,6 +26,12 @@ For the following steps you need to go to Victoria-3-dev-utilities folder and wi
 To install the requirements:
  - `python -m pip install -r requirements.txt`
 
+FOR LINUX OPERATING SYSTEM ONLY (ignore on windows):
+-  `sudo apt-get install python3-tk`
+
+FOR MACOS OPERATING SYSTEM ONLY (ignore on windows):
+- `brew install python-tk`
+
 To start simply run:
  - `python index.py`
 

@@ -13,7 +13,10 @@ class Technologies(DataFormat):
             prefixes += Technologies.prefixes
 
         game_version = os.path.join(game_folder, Technologies.relative_file_location)
-        mod_version = os.path.join(mod_folder, Technologies.relative_file_location)
+        if mod_folder:
+            mod_version = os.path.join(mod_folder, Technologies.relative_file_location)
+        else:
+            mod_version = None
         super().__init__(game_version, mod_version, prefixes=prefixes)
         self.interpret()
 
@@ -34,7 +37,7 @@ class Technologies(DataFormat):
 
     def calc_category_cost(self):
         # Extracting all unique categories
-        unique_categories = set([d["category"] for d in self.data.values()])
+        unique_categories = set([d.get("category") for d in self.data.values() if d.get("category")])
         # Calculating total tech cost for each category
         category_costs = {}
         for category in unique_categories:
@@ -60,11 +63,11 @@ def calculate_multipliers(category_costs, specified_value=None):
     }
 
     for category, cost in category_costs.items():
-        multipliers["to_lowest"][category] = lowest_cost / cost if cost != 0 else 0
-        multipliers["to_average"][category] = average_cost / cost if cost != 0 else 0
-        multipliers["to_highest"][category] = highest_cost / cost if cost != 0 else 0
+        multipliers["to_lowest"][category] = 1 / (lowest_cost / cost) if cost != 0 else 0
+        multipliers["to_average"][category] = 1 / (average_cost / cost) if cost != 0 else 0
+        multipliers["to_highest"][category] = 1 / (highest_cost / cost) if cost != 0 else 0
         if specified_value is not None:
-            multipliers["to_specified"][category] = specified_value / cost if cost != 0 else 0
+            multipliers["to_specified"][category] = 1 / (specified_value / cost) if cost != 0 else 0
 
     # Remove 'to_specified' key if no specified value is provided
     if specified_value is None:
@@ -86,14 +89,16 @@ if __name__ == '__main__':
     costs = technologies.calc_category_cost()
 
     print(costs)
-    pp.pprint(calculate_multipliers(costs, 730000))
+    pp.pprint(calculate_multipliers(costs, 775000))
 
-    print("\n GAME FILES \n")
-    for name, element in technologies.items():
-        if Test.game_directory in technologies.data_refs[name]["_source"]:
-            print(name, element)
+    # print("\n GAME FILES \n")
+    # for name, element in technologies.items():
+    #     if Test.game_directory in technologies.data_refs[name]["_source"]:
+    #         print(name, element)
+    #
+    # print("\n MOD FILES \n")
+    # for name, element in technologies.items():
+    #     if Test.mod_directory in technologies.data_refs[name]["_source"]:
+    #         print(name, element)
 
-    print("\n MOD FILES \n")
-    for name, element in technologies.items():
-        if Test.mod_directory in technologies.data_refs[name]["_source"]:
-            print(name, element)
+

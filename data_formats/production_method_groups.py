@@ -14,7 +14,10 @@ class ProductionMethodGroups(DataFormat):
             prefixes += ProductionMethodGroups.prefixes
 
         game_version = os.path.join(game_folder, ProductionMethodGroups.relative_file_location)
-        mod_version = os.path.join(mod_folder, ProductionMethodGroups.relative_file_location)
+        if mod_folder:
+            mod_version = os.path.join(mod_folder, ProductionMethodGroups.relative_file_location)
+        else:
+            mod_version = None
         super().__init__(game_version, mod_version, prefixes=prefixes)
         self.interpret()
 
