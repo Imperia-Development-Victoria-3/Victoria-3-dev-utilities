@@ -54,8 +54,6 @@ cache = MyDict()
 cache.set("game_directory", config["game_directory"])
 cache.set("mod_directory", config["mod_directory"])
 
-print("game", cache.get("game_directory"))
-print("mod", cache.get("mod_directory"))
 # cache = Cache(app.server, config={
 #     'CACHE_TYPE': 'simple'
 #     # 'CACHE_TYPE': 'filesystem',
