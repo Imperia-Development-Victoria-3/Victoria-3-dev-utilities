@@ -25,28 +25,37 @@ if not config:
 
 
     # Example usage:
-    game_folder_paths = ["C:/Program Files (x86)/Steam/steamapps/common/Victoria 3/game",
-                         "D:/Steam Library/steamapps/common/Victoria 3/game",
-                         "E:/Steam Library/steamapps/common/Victoria 3/game",
-                         "F:/Steam Library/steamapps/common/Victoria 3/game",
-                         "G:/Steam Library/steamapps/common/Victoria 3/game",
-                         "H:/Steam Library/steamapps/common/Victoria 3/game",
-                         "I:/Steam Library/steamapps/common/Victoria 3/game",
-                         "J:/Steam Library/steamapps/common/Victoria 3/game",
-                         "K:/Steam Library/steamapps/common/Victoria 3/game"
-                         "~/.steam/steam/SteamApps/common/Victoria 3/game"
-                         "~/.local/share/Steam/common/Victoria 3/game"]
+    game_folder_paths = [
+        "C:/Program Files (x86)/Steam/steamapps/common/Victoria 3/game/",
+        "D:/Steam Library/steamapps/common/Victoria 3/game/",
+        "E:/Steam Library/steamapps/common/Victoria 3/game/",
+        "F:/Steam Library/steamapps/common/Victoria 3/game/",
+        "G:/Steam Library/steamapps/common/Victoria 3/game/",
+        "H:/Steam Library/steamapps/common/Victoria 3/game/",
+        "I:/Steam Library/steamapps/common/Victoria 3/game/",
+        "J:/Steam Library/steamapps/common/Victoria 3/game/",
+        "K:/Steam Library/steamapps/common/Victoria 3/game/",
+        os.path.join(Path.home(), os.path.normpath(".steam/steam/SteamApps/common/Victoria 3/game/")),
+        os.path.join(Path.home(), os.path.normpath(".local/share/Steam/common/Victoria 3/game/")),
+        os.path.join(Path.home(), os.path.normpath(".steam/debian-installation/steamapps/common/Victoria 3/game/"))]
+
+    mod_folders_paths = [
+        os.path.join(Path.home(), os.path.normpath("Documents/Paradox Interactive/Victoria 3/mod/Victoria-3-Dev")),
+        os.path.join(Path.home(), os.path.normpath(".local/share/Paradox Interactive/Victoria 3/mod/Victoria-3-Dev"))
+    ]
+
     config = {
         "game_directory": first_valid_path(game_folder_paths),
-        "mod_directory": os.path.join(Path.home(),
-                                      os.path.normpath("Documents/Paradox Interactive/Victoria 3/mod/Victoria-3-Dev"))
+        "mod_directory": first_valid_path(mod_folders_paths)
     }
 
 cache = MyDict()
 
 cache.set("game_directory", config["game_directory"])
-cache.set("mod_directory",  config["mod_directory"])
+cache.set("mod_directory", config["mod_directory"])
 
+print("game", cache.get("game_directory"))
+print("mod", cache.get("mod_directory"))
 # cache = Cache(app.server, config={
 #     'CACHE_TYPE': 'simple'
 #     # 'CACHE_TYPE': 'filesystem',

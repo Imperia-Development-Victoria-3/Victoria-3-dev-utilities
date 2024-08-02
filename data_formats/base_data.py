@@ -63,8 +63,13 @@ class DataFormat:
             del value["_source"]
 
     def interpret(self):
-        mod_folder_walk = list(os.walk(self.mod_folder))
-        overwritten_files = {os.path.basename(dirpath): filenames for (dirpath, _, filenames) in mod_folder_walk}
+
+        if self.mod_folder:
+            mod_folder_walk = list(os.walk(self.mod_folder))
+            overwritten_files = {os.path.basename(dirpath): filenames for (dirpath, _, filenames) in mod_folder_walk}
+        else:
+            overwritten_files = {}
+
         for dirpath, _, filenames in os.walk(self.game_folder):
             for filename in filenames:
                 if filename.endswith('.txt'):
@@ -77,16 +82,17 @@ class DataFormat:
                         self.add_file_location(dictionary, file_path)
                         self.data_refs.update(dictionary)
 
-        for dirpath, _, filenames in mod_folder_walk:
-            for filename in filenames:
-                if filename.endswith('.txt'):
-                    file_path = os.path.normpath(os.path.join(dirpath, filename))
-                    dictionary = parse_text_file(file_path)
-                    self._mod_dictionary[file_path] = dictionary
+        if self.mod_folder:
+            for dirpath, _, filenames in mod_folder_walk:
+                for filename in filenames:
+                    if filename.endswith('.txt'):
+                        file_path = os.path.normpath(os.path.join(dirpath, filename))
+                        dictionary = parse_text_file(file_path)
+                        self._mod_dictionary[file_path] = dictionary
 
-                    dictionary = DataFormat.copy_dict_with_string_keys(dictionary)
-                    self.add_file_location(dictionary, file_path)
-                    self.data_refs.update(dictionary)
+                        dictionary = DataFormat.copy_dict_with_string_keys(dictionary)
+                        self.add_file_location(dictionary, file_path)
+                        self.data_refs.update(dictionary)
 
         DataFormat.copy_dict_with_string_keys(self.data_refs, self._prefix_manager)
         self.data = copy.deepcopy(self.data_refs)

@@ -1,11 +1,16 @@
 import json
+import os
 
-CONFIG_FILE = '.cache/config.json'
+CONFIG_FOLDER = ".cache"
+CONFIG_FILE = f'{CONFIG_FOLDER}/config.json'
 
 def save_configurations(config):
     """
     Save configurations to a JSON file.
     """
+    if not os.path.exists(CONFIG_FOLDER):
+        os.makedirs(CONFIG_FOLDER)
+
     with open(CONFIG_FILE, 'w') as file:
         json.dump(config, file)
 
