@@ -138,7 +138,7 @@ def store_previous_data(previous_data):
 @app.callback(
     Output('editable-table', 'data', allow_duplicate=True),
     Output('buy-packages-plot', 'figure', allow_duplicate=True),
-    Input('transform options', 'value'),
+    Input('transform-options', 'value'),
     prevent_initial_call=True
 )
 def update_transformations(transforms):
