@@ -43,7 +43,7 @@ def select_folder_path(n_clicks):
     p.join()
     path = q.get()
     if path:
-        path = os.path.normpath(path)
+        path = os.path.expanduser(os.path.normpath(path))
         if path != cache.get("game_directory"):
             tmp_mod_directory = cache.get("game_mod_directory", path)
             cache.clear()  # to clear all cached results from other pages
@@ -68,7 +68,7 @@ def select_folder_path(n_clicks):
     p.join()
     path = q.get()
     if path:
-        path = os.path.normpath(path)
+        path = os.path.expanduser(os.path.normpath(path))
         if path != cache.get("mod_directory"):
             cache.clear()  # to clear all cached results from other pages
             config["mod_directory"] = path
