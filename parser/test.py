@@ -51,27 +51,6 @@ def test_file(file_path, parser_func, reconstruct_func, config):
                                                                                            reconstructed_parsed_data)
 
 
-exclusion_list = {
-    "common\\cultures\\00_additional_cultures.txt",
-    "common\\cultures\\00_cultures.txt",
-    'common\\genes\\02_genes_accessories_hairstyles.txt',
-    'common\\genes\\03_genes_accessories_beards.txt',
-    'common\\genes\\97_genes_accessories_clothes.txt',
-    'common\\genes\\99_genes_special.txt',
-    'common\\laws\\00_slavery.txt',
-    'common\\mobilization_options\\00_mobilization_option.txt',
-    'common\\named_colors\\00_formation_colors.txt',
-    'common\\state_traits\\06_eastern_europe_traits.txt',
-    'gfx'
-}
-
-
-@dataclass
-class Config:
-    items_same_line: bool
-    comments_same_level: bool
-
-
 class Mutex:
 
     def __init__(self, keys, can_be_empty, type):
@@ -80,7 +59,7 @@ class Mutex:
         self.type = type
 
     def check(self, config: dict) -> bool:
-        if self.type == bool:
+        if self.type == bool or self.type == str:
             return self.check_bool(config)
         elif self.type == int:
             return self.check_int(config)
@@ -98,7 +77,7 @@ class Mutex:
     def check_int(self, config: dict) -> bool:
         new_key_list = [key for key in self.keys if config[key] is not None]
         for i, key in enumerate(new_key_list[1:], 1):
-            print(config[new_key_list[i - 1]],  config[key])
+            print(config[new_key_list[i - 1]], config[key])
             if config[key] is None or config[new_key_list[i - 1]] > config[key]:
                 return False
         return True
@@ -113,6 +92,8 @@ class Mutex:
             self.set_bool(config, key)
         elif self.type == int:
             self.set_int(config, key, value)
+        elif self.type == str:
+            self.set_string(key, value)
 
     def set_bool(self, config: dict, set_key: str) -> None:
         for key in self.keys:
@@ -122,11 +103,24 @@ class Mutex:
                 config[key] = True
 
     def set_int(self, config: dict, set_key: str, set_value: int) -> None:
-        index = self.keys.index(set_key)
-        for key in self.keys[:set_key]:
+        tmp_keys = list(self.keys)
+        index = self.keys.index(tmp_keys)
+        for key in tmp_keys[:index]:
             value = config[key]
             if value > set_value:
-                config[set_key] = set_value
+                config[key] = set_value
+
+        for key in tmp_keys[index:]:
+            value = config[key]
+            if value < set_value:
+                config[key] = set_value
+
+    def set_string(self, config: dict, set_key: str, set_value: int) -> None:
+        for key in self.keys:
+            if key is not set_key:
+                config[key] = set_value
+            else:
+                config[key] = set_value
 
 
 def load_yaml_config(file_path):
@@ -137,23 +131,27 @@ def load_yaml_config(file_path):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="A script with YAML config and command-line args")
-    parser.add_argument('--config', type=str, help='Path to the YAML configuration file', default=os.path.normpath('parser/config/general.yml'))
+    parser.add_argument('--config', type=str, help='Path to the YAML configuration file',
+                        default=os.path.normpath('parser/config/general.yml'))
     parser.add_argument('--default_no_double_line', type=bool, help='Default no double line')
     parser.add_argument('--default_yes_double_line', type=bool, help='Default yes double line')
     parser.add_argument('--object_yes_double_line', type=bool, help='Object yes double line')
     parser.add_argument('--force_single_line_until_item_count', type=int, help='Force single line until item count')
     parser.add_argument('--force_multi_line_from_item_count', type=int, help='Force multi line from item count')
+    parser.add_argument('--format_folder', type=str, help='Format folder')
+    parser.add_argument("--format_files", nargs='*', type=str, help="Format files")
 
     mutex_1 = Mutex(["default_no_double_line", "default_yes_double_line"], True, bool)
     mutex_3 = Mutex(["object_yes_double_line"], True, bool)
     mutex_4 = Mutex(["default_yes_double_line", "force_multi_line_from_item_count"], True, bool)
     mutex_5 = Mutex(["force_single_line_until_item_count", "force_multi_line_from_item_count"], True, int)
-    mutexes = [mutex_1, mutex_3, mutex_4, mutex_5]
+    mutex_6 = Mutex(["format_folder", "format_files"], False, str)
+    mutexes = [mutex_1, mutex_3, mutex_4, mutex_5, mutex_6]
 
     return parser.parse_args(), mutexes
 
 
-def test_all_txt_files(folder_path, parser_func, reconstruct_func, config = {}):
+def test_all_txt_files(folder_path, parser_func, reconstruct_func, config={}):
     total_files = 0
     passed_reconstruction = 0
     passed_consistency = 0
@@ -206,9 +204,12 @@ def process_file(file_path, parser_func, reconstruct_func, reconstruct_config):
 
     original_parsed_data = parser_func.parse(content)
     reconstructed_text = reconstruct_func(original_parsed_data, reconstruct_config)
-    #
-    with open(file_path, 'w', encoding='utf-8-sig') as file:
-        file.write(reconstructed_text)
+
+    if test_text_reconstruction(content, reconstructed_text):
+        with open(file_path, 'w', encoding='utf-8-sig') as file:
+            file.write(reconstructed_text)
+    else:
+        print(f"ERROR {file_path} couldn't be reconstructed")
 
 
 def is_excluded(file_path, exclusion_list):
@@ -233,61 +234,30 @@ def process_all_txt_files(folder_path, parser_func, reconstruct_func, exclusion_
 
 
 if __name__ == '__main__':
-    from constants import Test
     import os
-    import re
-    import pprint
     from victoria_script_parses import parser
     from victoria_script_reconstructor import reconstruct
 
-    from constants import Test
-    import os
-
     args, mutexes = parse_args()
-    config = load_yaml_config(args.config)["config"]
-
+    configs_yaml = load_yaml_config(args.config)
+    config, exclusion_list = configs_yaml["config"], configs_yaml["exclusion_list"]
     args_dict = vars(args)
-    config_path = args_dict.pop('config')
 
     # Override config values with command-line arguments if provided
     for key, value in args_dict.items():
-        if value is not None:
+        if value is not None or config.get(key) is None:
             config[key] = value
-
-
     for mutex in mutexes:
         if not mutex.check(config):
-            raise Exception(f"The provided general config is not valid conflicting mutexes are: {mutex.keys} with values {[config[key] for key in mutex.keys]}\n(only one should be true, or ints should be in ascending order)")
+            raise Exception(
+                f"The provided general config is not valid conflicting mutexes are: {mutex.keys} with values {[config[key] for key in mutex.keys]}\n(only one should be true, or ints should be in ascending order)")
 
-    # path = os.path.join(Test.game_directory, "common\\")
-    # path = os.path.normpath(
-    #     'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game\\common\\coat_of_arms\\coat_of_arms\\02_countries.txt')
+    if args.format_folder:
+        target = os.path.expanduser(os.path.normpath(args.format_folder))
+    elif args.format_files:
+        target = [os.path.expanduser(os.path.normpath(path)) for path in args.format_files]
+    else:
+        raise ValueError("no target defined")
 
-    # path = os.path.normpath("C:\\Users\\hidde\\Documents\\Paradox Interactive\\Victoria 3\\mod\\External-mods")
-    # path = os.path.normpath(
-    #     "C:\\Users\\hidde\\Documents\\Paradox Interactive\\Victoria 3\\mod\\Victoria-3-dev")
-    #
-    # process_all_txt_files(path, parser, reconstruct, exclusion_list, config)
-    # print(test_all_txt_files(path, parser, reconstruct, config))
+    process_all_txt_files(target, parser, reconstruct, exclusion_list, config)
 
-    path = os.path.normpath("C:\\Users\\hidde\\Documents\\Paradox Interactive\\Victoria 3\\mod\\Victoria-3-dev\\common\\character_traits\\skill_traits.txt")
-    process_file(path, parser, reconstruct, config)
-    with open(path, encoding='utf-8-sig') as file:
-        file_string = file.read()
-    # print(path)
-
-    parsed_data = parser.parse(file_string)
-    reconstructed_text = reconstruct(parsed_data, config)
-    reconstructed_parsed_data = parser.parse(reconstructed_text)
-    reconstructed_parsed_text = reconstruct(reconstructed_parsed_data, config)
-
-    #
-    print(test_text_reconstruction(file_string, reconstructed_parsed_text))
-    print(test_parsing_consistency(reconstructed_text, reconstructed_parsed_data))
-    # #
-    # # print(file_string)
-    # # Parse an expression
-    # # pprint.pprint(reconstructed_parsed_data)
-    # if parsed_data:
-    #     thing = reconstruct(reconstructed_parsed_data)
-    #     print(thing)

@@ -4,7 +4,7 @@ from typing import Callable, List
 from victoria_script_parses import ParseTypes
 
 reconstruction_functions: List[Callable] = [Callable] * len(ParseTypes)
-State = namedtuple('State', ['level', 'no_new_lines', 'after_end_of_object', 'after_last_object', 'item_count_object'])
+State = namedtuple('State', ['level', 'no_new_lines', 'after_end_of_object', 'after_last_object', 'currently_no_newlines_in_list', 'item_count_object'])
 
 
 def register_reconstruction_function(func):
@@ -31,12 +31,15 @@ def create_tabs(state):
 @register_reconstruction_function
 def reconstruct_list(element, state, config, function):
     final_list = element[1]
+    currently_no_newlines_in_list = True
     if config["force_single_line_until_item_count"] is not None or config[
         "force_multi_line_from_item_count"] is not None:
         count = 0
         for e in element[1]:
             if e[0] != ParseTypes.NEW_LINE and e[0] != ParseTypes.DOUBLE_NEWLINE:
                 count += 1
+            else:
+                currently_no_newlines_in_list = False
 
     if config["force_single_line_until_item_count"] is not None and count <= config[
         "force_single_line_until_item_count"]:
@@ -65,10 +68,12 @@ def reconstruct_list(element, state, config, function):
 
     if not final_list:
         return ""
+
+
     default_no_new_lines = not (final_list[0][0] == ParseTypes.NEW_LINE or final_list[0][
         0] == ParseTypes.DOUBLE_NEWLINE or final_list[0][0] == ParseTypes.FULL_LINE_COMMENT) and state.level > 0
 
-    new_state = state._replace(no_new_lines=default_no_new_lines)
+    new_state = state._replace(no_new_lines=default_no_new_lines, currently_no_newlines_in_list=currently_no_newlines_in_list)
     string = ""
     if new_state.no_new_lines:
         string += " "
@@ -214,11 +219,11 @@ def reconstruct_double_newline(element, state, config, function):
 @register_reconstruction_function
 def reconstruct_new_line(element, state, config, function):
     if (not state.after_last_object # never a double line just before }
-            and (
-                (config["default_yes_double_line"] or (
-                        (config["object_yes_double_line"] or (config["force_multi_line_from_item_count"] and state.item_count_object > config["force_multi_line_from_item_count"]))
-                        and state.after_end_of_object)) # overwrite default for object if specified
-            )):
+        and ((
+            config["default_yes_double_line"]
+             or (config["object_yes_double_line"] and state.after_end_of_object and state.currently_no_newlines_in_list)
+             or (config["force_multi_line_from_item_count"] and state.item_count_object > config["force_multi_line_from_item_count"] and state.after_end_of_object)) # overwrite default for object if specified
+        )):
         tabs = create_tabs(state)
         return f"\n{tabs}\n"
     return f"\n"
@@ -232,4 +237,4 @@ def reconstruct_any_object(element, state, config):
 
 def reconstruct(parsed_data, config):
     # Start processing from the outermost layer
-    return reconstruct_any_object(parsed_data, State(0, False, False, False, 10000), config)
+    return reconstruct_any_object(parsed_data, State(0, False, False, False, False, 10000), config)
