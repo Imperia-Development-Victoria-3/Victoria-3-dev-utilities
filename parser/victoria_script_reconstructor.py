@@ -137,7 +137,7 @@ def reconstruct_comment(element, state, config, function):
 def reconstruct_object(element, state, config, function):
     if not element[2]:  # empty
         new_state = state._replace(no_new_lines=True)
-        return f"{function(element[1], state=new_state, config=config)} {function(element[3], state=new_state, config=config)}"
+        return f"{function(element[1], state=new_state, config=config)}{function(element[3], state=new_state, config=config)}"
     else:
         # newline before object close
         if (element[2][1][-1][0] == ParseTypes.NEW_LINE or element[2][1][-1][
