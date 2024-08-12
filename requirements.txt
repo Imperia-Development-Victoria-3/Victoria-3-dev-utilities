@@ -9,3 +9,4 @@ pandas
 flask-caching
 deepdiff
 tk
+pyyaml

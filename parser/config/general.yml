@@ -1,0 +1,32 @@
+config:
+  default_no_double_line: false
+  default_yes_double_line: false
+  object_yes_double_line: true
+  force_single_line_until_item_count: 0
+  force_multi_line_from_item_count: 10000000
+
+
+exclusion_list:
+  - "gfx"
+  - "fonts"
+  - "gui"
+  - "input_profile"
+  - "content_source"
+  - "dlc"
+  - "interface"
+  - "licenses"
+  - "localisation"
+  - "map_data"
+  - "music"
+  - "notifications"
+  - "sound"
+  - "soundtrack"
+  - "tools"
+  - "credits.txt"
+  - "checksum_manifest.txt"
+  - "compound_settings.txt"
+  - "settings_layout.txt"
+  - "save_game_analysis.txt"
+  - ".assets"
+  - "coat_of_arms"
+  - "common/history/states/"
