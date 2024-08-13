@@ -1,4 +1,5 @@
 config:
+  partial_comment_seperator: "\t"
   default_no_double_line: false
   default_yes_double_line: false
   object_yes_double_line: true

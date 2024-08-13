@@ -130,7 +130,7 @@ def reconstruct_full_line_comment(element, state, config, function):
 
 @register_reconstruction_function
 def reconstruct_comment(element, state, config, function):
-    return f"{function(element[1], state=state, config=config)}\t{element[2]}"
+    return f"{function(element[1], state=state, config=config)}{config['partial_comment_seperator']}{element[2]}"
 
 
 @register_reconstruction_function
@@ -201,9 +201,8 @@ def reconstruct_begin_comment(element, state, config, function):
 
 @register_reconstruction_function
 def reconstruct_end_comment(element, state, config, function):
-    print(state)
     tabs = create_tabs(state)
-    return f"{tabs}{element[1]}\t{element[2]}"
+    return f"{tabs}{element[1]}{config['partial_comment_seperator']}{element[2]}"
 
 
 @register_reconstruction_function
