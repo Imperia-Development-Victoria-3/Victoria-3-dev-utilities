@@ -2,6 +2,7 @@ from collections import namedtuple
 from typing import Callable, List
 
 from victoria_script_parses import ParseTypes
+from args import MUTEX_LOOKUP
 
 reconstruction_functions: List[Callable] = [Callable] * len(ParseTypes)
 State = namedtuple('State', ['level', 'no_new_lines', 'after_end_of_object', 'after_last_object', 'currently_no_newlines_in_list', 'item_count_object'])
@@ -79,6 +80,10 @@ def reconstruct_list(element, state, config, function):
         string += " "
 
     for i, item in enumerate(final_list):
+        if item[0] == ParseTypes.ASSIGNMENT:
+            print(item[2])
+            # MUTEX_LOOKUP[]
+
         if item[0] == ParseTypes.ASSIGNMENT and item[3][0] == ParseTypes.OBJECT and item[3][2]:
             count = 0
             for e in item[3][2][1]:
@@ -130,7 +135,7 @@ def reconstruct_full_line_comment(element, state, config, function):
 
 @register_reconstruction_function
 def reconstruct_comment(element, state, config, function):
-    return f"{function(element[1], state=state, config=config)}{config['partial_comment_seperator']}{element[2]}"
+    return f"{function(element[1], state=state, config=config)}{config['partial_comment_separator']}{element[2]}"
 
 
 @register_reconstruction_function
@@ -191,7 +196,6 @@ def reconstruct_end(element, state, config, function):
 
 @register_reconstruction_function
 def reconstruct_begin_comment(element, state, config, function):
-    # print(state)
     string = f"{element[1]}\t{element[2]}"
     if state.no_new_lines:
         state = state._replace(no_new_lines=False, level=state.level+1)
@@ -202,7 +206,7 @@ def reconstruct_begin_comment(element, state, config, function):
 @register_reconstruction_function
 def reconstruct_end_comment(element, state, config, function):
     tabs = create_tabs(state)
-    return f"{tabs}{element[1]}{config['partial_comment_seperator']}{element[2]}"
+    return f"{tabs}{element[1]}{config['partial_comment_separator']}{element[2]}"
 
 
 @register_reconstruction_function

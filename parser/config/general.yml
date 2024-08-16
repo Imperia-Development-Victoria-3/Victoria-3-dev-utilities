@@ -1,5 +1,5 @@
 config:
-  partial_comment_seperator: "\t"
+  partial_comment_separator: "\t"
   default_no_double_line: false
   default_yes_double_line: false
   object_yes_double_line: true
@@ -17,7 +17,6 @@ exclusion_list:
   - "interface"
   - "licenses"
   - "localisation"
-  - "map_data"
   - "music"
   - "notifications"
   - "sound"
@@ -31,3 +30,13 @@ exclusion_list:
   - ".assets"
   - "coat_of_arms"
   - "common/history/states/"
+
+
+special_words:
+  if:
+    default_no_double_line: true
+
+special_folders:
+  map_data:
+    force_single_line_until_item_count: 10000
+
