@@ -41,7 +41,7 @@ class BuyPackages(DataFormat):
         for key, value in tmp_data.items():
             packages[int(key.split("_")[-1]) - 1] = value
         self.data_frame = pd.json_normalize(packages, sep='.')
-        self.data_frame = self.data_frame.applymap(float)
+        self.data_frame = self.data_frame.map(float)
 
     def update_value(self, key, index, value):
         if value:
