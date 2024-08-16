@@ -41,7 +41,7 @@ class BuyPackages(DataFormat):
         for key, value in tmp_data.items():
             packages[int(key.split("_")[-1]) - 1] = value
         self.data_frame = pd.json_normalize(packages, sep='.')
-        self.data_frame = self.data_frame.applymap(float)
+        self.data_frame = self.data_frame.map(float)
 
     def update_value(self, key, index, value):
         if value:
@@ -158,9 +158,15 @@ class DashBuyPackages(BuyPackages):
             fig.update_traces(mode="markers+lines", hovertemplate=None)
             fig.update_layout(hovermode="x unified", yaxis_type='log')
         elif plot_type == "area":
-            fig = px.area(renamed, groupnorm='percent')
+            fig = px.area(renamed, groupnorm='percent', color_discrete_sequence=px.colors.qualitative.Alphabet)
             fig.update_traces(mode="markers+lines", hovertemplate=None)
-            fig.update_layout(hovermode="x unified")
+            fig.update_layout(hovermode="x unified", xaxis_title="Wealth Level", yaxis_title="Consumption Percentage",
+                              yaxis=dict(
+                                  range=[0, 100]
+                              ),
+                              xaxis=dict(
+                                  range=[0, 98]
+                              ))
         else:
             raise ValueError("invalid ")
         self.figure_traces = {trace.name: i for i, trace in enumerate(fig["data"])}

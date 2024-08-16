@@ -1,10 +1,10 @@
 from collections import defaultdict
 
 from dash import dcc, html, Input, Output, Patch, dash_table, State, callback_context
-from data_utils import TransformNoInverse, Percentage, PriceCompensation, update_table_fill, linear_fill, \
+from data_utils import TransformNoInverse, Percentage, update_table_fill, linear_fill, \
     exponential_fill
 from dash.exceptions import PreventUpdate
-from data_formats import DashBuyPackages, Goods, PopNeeds
+from data_formats import DashBuyPackages, Goods
 import numpy as np
 from app import app, cache
 
@@ -12,10 +12,6 @@ from app import app, cache
 def get_layout():
     is_percentage = cache.get(DashBuyPackages.__name__).data_frame.is_percentage if hasattr(
         cache.get(DashBuyPackages.__name__).data_frame, "is_percentage") else False
-    is_price_adjusted = False
-    for transforms in cache.get(DashBuyPackages.__name__)._transforms:
-        if type(transforms) == PriceCompensation:
-            is_price_adjusted = True
     return html.Div([
         # Hidden Div
         html.Div(id="hidden-output", style={"display": "none"}),
@@ -33,15 +29,6 @@ def get_layout():
         dcc.Tabs(id='tabs', value='tab-1', children=[
             dcc.Tab(label='View Options', value='tab-1', children=[
                 html.Div([
-                    html.Div([
-                        html.Label('Transform Options:', style={'color': 'blue', 'font-weight': 'bold'}),
-                        dcc.Checklist(
-                            options=[{'label': 'Apply Price Adjustment', 'value': 'price'}],
-                            value=['price'] if is_price_adjusted else [],
-                            id="transform-options"
-                        ),
-                    ], style={'display': 'inline-block', 'margin-right': '20px', 'vertical-align': 'top'}),
-
                     html.Div([
                         html.Label('Number Type:', style={'color': 'blue', 'font-weight': 'bold'}),
                         dcc.RadioItems(
@@ -124,7 +111,7 @@ def get_layout():
     ])
 
 
-requirements = [DashBuyPackages, Goods, PopNeeds]
+requirements = [DashBuyPackages, Goods]
 
 
 @app.callback(
@@ -133,24 +120,6 @@ requirements = [DashBuyPackages, Goods, PopNeeds]
     prevent_initial_call=True)
 def store_previous_data(previous_data):
     return previous_data
-
-
-@app.callback(
-    Output('editable-table', 'data', allow_duplicate=True),
-    Output('buy-packages-plot', 'figure', allow_duplicate=True),
-    Input('transform-options', 'value'),
-    prevent_initial_call=True
-)
-def update_transformations(transforms):
-    transformation = PriceCompensation(cache.get(Goods.__name__), cache.get(PopNeeds.__name__))
-    if 'price' in transforms:
-        cache.get(DashBuyPackages.__name__).apply_transformation(transformation)
-    else:
-        cache.get(DashBuyPackages.__name__).apply_transformation(transformation, forward=False)
-    return cache.get(DashBuyPackages.__name__).data_frame.to_dict("records"), cache.get(
-        DashBuyPackages.__name__).get_plotly_plot("goods.",
-                                                  "area")
-
 
 @app.callback(
     Output('hidden-output', 'children'),
