@@ -1,3 +1,4 @@
+import copy
 from collections import namedtuple
 from typing import Callable, List
 
@@ -32,7 +33,14 @@ def create_tabs(state):
 @register_reconstruction_function
 def reconstruct_list(element, state, config, function):
     final_list = element[1]
+    word_config_lookup = config["special_words"]
+
     currently_no_newlines_in_list = True
+    for e in element[1]:
+        if not (e[0] != ParseTypes.NEW_LINE and e[0] != ParseTypes.DOUBLE_NEWLINE):
+            currently_no_newlines_in_list = False
+
+
     if config["force_single_line_until_item_count"] is not None or config[
         "force_multi_line_from_item_count"] is not None:
         count = 0
@@ -80,9 +88,11 @@ def reconstruct_list(element, state, config, function):
         string += " "
 
     for i, item in enumerate(final_list):
-        if item[0] == ParseTypes.ASSIGNMENT:
-            print(item[2])
-            # MUTEX_LOOKUP[]
+        if item[0] == ParseTypes.ASSIGNMENT and word_config_lookup.get(item[2]):
+            config = copy.deepcopy(config)
+            for key, value in word_config_lookup[item[2]].items():
+                mutex = MUTEX_LOOKUP[key]
+                mutex.set(config, key, value)
 
         if item[0] == ParseTypes.ASSIGNMENT and item[3][0] == ParseTypes.OBJECT and item[3][2]:
             count = 0
@@ -213,6 +223,7 @@ def reconstruct_end_comment(element, state, config, function):
 def reconstruct_double_newline(element, state, config, function):
     tabs = create_tabs(state)
     if (state.after_last_object # never a double line just before }
+            or (config["object_yes_double_line"] and state.currently_no_newlines_in_list)
             or (config["default_no_double_line"] and not (config["object_yes_double_line"] and state.after_end_of_object)) # overwrite default for objects if specified
             or (config["force_single_line_until_item_count"] and state.item_count_object <= config["force_single_line_until_item_count"])): # no double newline after a single line object
         return f"\n"
@@ -221,14 +232,15 @@ def reconstruct_double_newline(element, state, config, function):
 
 @register_reconstruction_function
 def reconstruct_new_line(element, state, config, function):
-    if (not state.after_last_object # never a double line just before }
-        and ((
+    if (not state.after_last_object  # never a double line just before }
+        and (
             config["default_yes_double_line"]
-             or (config["object_yes_double_line"] and state.after_end_of_object and state.currently_no_newlines_in_list)
-             or (config["force_multi_line_from_item_count"] and state.item_count_object > config["force_multi_line_from_item_count"] and state.after_end_of_object)) # overwrite default for object if specified
+             or (config["object_yes_double_line"] and state.after_end_of_object and not state.currently_no_newlines_in_list)
+             or (config["force_multi_line_from_item_count"] and state.item_count_object > config["force_multi_line_from_item_count"] and state.after_end_of_object) # overwrite default for object if specified
         )):
         tabs = create_tabs(state)
         return f"\n{tabs}\n"
+    # print(state.after_last_object, config["object_yes_double_line"], state.after_end_of_object, state.currently_no_newlines_in_list)
     return f"\n"
 
 

@@ -33,25 +33,25 @@ class Mutex:
                 return False
         return True
 
-    def set(self, config: dict, key: str, value: int = None) -> None:
+    def set(self, config: dict, key: str, value: [int, bool] = None) -> None:
         if key not in self.keys:
             raise ValueError("Tried to set non-existent key")
         if self.type == int and value is None:
             raise ValueError("Tried to set int mutex without giving a value")
 
         if self.type == bool:
-            self.set_bool(config, key)
+            self.set_bool(config, key, value)
         elif self.type == int:
             self.set_int(config, key, value)
         elif self.type == str:
             self.set_string(key, value)
 
-    def set_bool(self, config: dict, set_key: str) -> None:
+    def set_bool(self, config: dict, set_key: str, set_value: bool) -> None:
         for key in self.keys:
             if key is not set_key:
                 config[key] = False
             else:
-                config[key] = True
+                config[key] = set_value
 
     def set_int(self, config: dict, set_key: str, set_value: int) -> None:
         tmp_keys = list(self.keys)
