@@ -79,7 +79,9 @@ def encode_symbol(symbols, stack, iteration):
         while symbols[0][3] == Constants.PART_LINE_COMMENT_TYPE or symbols[0][3] == Constants.FULL_LINE_COMMENT_TYPE:
             comments.append(symbols.pop(0))
 
-        if symbols[0][3] == Constants.EQUAL_TYPE:
+        if symbols[0][3] == Constants.EQUAL_TYPE or \
+                symbols[0][3] == Constants.GREATER_TYPE or symbols[0][3] == Constants.EQUAL_OR_LESSER_TYPE or \
+                symbols[0][3] == Constants.LESSER_TYPE or symbols[0][3] == Constants.EQUAL_AND_EXISTS_TYPE:
             if symbols[1][3] == Constants.BEGIN_DICT_TYPE:
                 dictionary = dict()
                 if not stack[-1].get(symbol[2]):
